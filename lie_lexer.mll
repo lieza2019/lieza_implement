@@ -5,7 +5,7 @@
 (* lexer definition *)
 let space = [' ' '\t' '\n' '\r']
 let digit = ['0'-'9']
-let alpha = ['A'-'Z' 'a'-'z' '_']
+let alpha = ['A'-'Z' 'a'-'z']
 let alnum = alpha | digit
 
 rule token = parse
@@ -27,9 +27,11 @@ rule token = parse
   | '>' { RBIL }
   | ',' { COMMA }
   | ':' { COLON }
+  | '_' { SPECIFIER }
   
   (* entities *)
-  | alpha alnum* { ENT (Lexing.lexeme lexbuf) }
+  | alpha alnum* { IDENT1 (Lexing.lexeme lexbuf) }
+  | alnum+ {IDENT0 (Lexing.lexeme lexbuf) }
   | space+ { token lexbuf }
   | eof { EOI }
   | _ {

@@ -1,8 +1,10 @@
 #load "lie_type.cmo";;
 #load "lie_equiv.cmo";;
+#load "lie_match.cmo";;
 #load "lie_lexer.cmo";;
 #load "lie_parser.cmo";;
 #load "lie_main.cmo";;
 open Lie_type;;
 open Lie_equiv;;
+open Lie_match;;
 open Lie_main;;
