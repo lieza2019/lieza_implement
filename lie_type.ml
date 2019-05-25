@@ -140,6 +140,15 @@ let morph_term judgement =
         | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term"))
        )
     )
+  and resolv_una op_ter t1 pat bindings' =
+    let t1's_bindings = (lkup_bindings t1 bindings')
+    in
+    match t1's_bindings with
+      [] -> (match pat with
+              Pat_bin (op, p_l, p_r) ->
+               raise (Failed_on_mapping_over_bindings (e_l, p_l, "morph_term"))
+             | _ -> raise (Illformed_judge_detected (ter, pat, "morph_term")) )
+          
   and resolv_bin op ter (e_l, e_r) pat bindings' = 
     let e_l's_bindings = (lkup_bindings e_l bindings') in
     let e_r's_bindings = (lkup_bindings e_r bindings')
