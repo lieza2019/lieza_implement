@@ -4,6 +4,23 @@ open Lie_equiv
 
 
 
+let rec is_nil t =
+  match t with
+    Term_ent (NIL, id, sp, ad) -> Some t
+  | Term_una (op, t1) -> (match op with
+                            STAR -> (is_nil t1)
+                          | _ -> None)
+  | Term_bin (op, t_l, t_r) -> if ((op == WEDGE) || (op == VEE)) then
+                                 (match (is_nil t_l) with
+                                    None -> None
+                                  | Some nil_l -> (match (is_nil t_r) with
+                                                     None -> None
+                                                   | Some nil_r -> Some nil_r) )
+                               else None
+  | _ -> None
+
+
+
 
 let rec tourbillon ter pat =
   match pat with
@@ -13,14 +30,22 @@ let rec tourbillon ter pat =
   | Pat_bin (WEDGE, p_1, p_2) -> (match (t_Cas_xtend ter pat) with
                                     None -> None
                                   | Some judge_matched -> Some judge_matched)
+  | Pat_bin (VEE, p_1, p_2) -> (match (t_Par_xtend ter pat) with
+                                    None -> None
+                                  | Some judge_matched -> Some judge_matched)
+  | Pat_una (STAR, p_1) -> (match (t_Cat0_xtend_nil ter pat) with
+                              Some judge_matched -> Some judge_matched
+                            | None -> (match (t_Cat0_xtend_sol ter p_1) with
+                                         None -> None
+                                       | Some judge_matched -> Some judge_matched) )
   | Pat_bin (ALT, p_L, p_R) -> (match (t_Alt_xtend ter pat) with
                                   None -> None
                                 | Some judge_matched -> Some judge_matched)
-  | Pat_una (OPT, p1) -> (match (t_Opt_xtend_nil ter pat) with
-                            Some judge_matched -> Some judge_matched
-                          | None -> (match (t_Opt_xtend_sol ter p1) with
-                                       None -> None
-                                     | Some judge_matched -> Some judge_matched) )
+  | Pat_una (OPT, p_1) -> (match (t_Opt_xtend_nil ter pat) with
+                             Some judge_matched -> Some judge_matched
+                           | None -> (match (t_Opt_xtend_sol ter p_1) with
+                                        None -> None
+                                      | Some judge_matched -> Some judge_matched) )
   | _ -> raise (Illegal_pat_detected (ter, pat, "tourbillon"))
 
 
@@ -116,6 +141,44 @@ and t_Par_xtend ter pat =
   | Some found -> Some found
 
 
+and t_Cat0_xtend_nil ter pat =
+  match (is_nil ter) with
+    None -> None
+  | Some v -> Some {ter = ter; equ = v; pat = pat; fin = FIN_NIL; bindings = []}
+
+
+and t_Cat0_xtend_sol ter pat =
+  let rec match_sol tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> (match (tourbillon x pat) with
+                    Some found -> Some found
+                  | None -> match_sol xs pat)
+  in
+  match (match_sol (equiv_terms ter true true) pat) with
+    None -> None
+  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat)); fin = FIN_SOL; bindings = found.bindings}
+
+
+and t_Opt_xtend_nil ter pat =
+  match (is_nil ter) with
+    None -> None
+  | Some v -> Some {ter = ter; equ = v; pat = pat; fin = FIN_NIL; bindings = []}
+
+
+and t_Opt_xtend_sol ter pat =
+  let rec match_sol tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> (match (tourbillon x pat) with
+                    Some found -> Some found
+                  | None -> match_sol xs pat)
+  in
+  match (match_sol (equiv_terms ter true true) pat) with
+    None -> None
+  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat)); fin = FIN_SOL; bindings = found.bindings}
+
+
 and t_Alt_xtend ter pat =
   let rec cmp_alt t pat =
     match pat with
@@ -139,40 +202,6 @@ and t_Alt_xtend ter pat =
                  | None -> match_alt xs pat
   in
   match (match_alt (equiv_terms ter true true) pat) with
-    None -> None
-  | Some found -> Some found
-
-
-and t_Opt_xtend_nil ter pat =
-  let rec is_nil t =
-    match t with
-      Term_ent (NIL, id, sp, ad) -> Some t
-    | Term_una (op, t1) -> (match op with
-                              STAR -> (is_nil t1)
-                            | _ -> None)
-    | Term_bin (op, t_l, t_r) -> if ((op == WEDGE) || (op == VEE)) then
-                                   (match (is_nil t_l) with
-                                      None -> None
-                                    | Some nil_l -> (match (is_nil t_r) with
-                                                       None -> None
-                                                     | Some nil_r -> Some nil_r) )
-                                 else None
-    | _ -> None
-  in
-  match (is_nil ter) with
-    None -> None
-  | Some v -> Some {ter = ter; equ = v; pat = pat; fin = FIN_NIL; bindings = []}
-
-
-and t_Opt_xtend_sol ter pat =
-  let rec match_sol tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> (match (tourbillon x pat) with
-                    Some found -> Some found
-                  | None -> match_sol xs pat)
-  in
-  match (match_sol (equiv_terms ter true true) pat) with
     None -> None
   | Some found -> Some found;;
 
