@@ -127,17 +127,27 @@ let morph_term judgement =
        (match fin_sym with
           FIN_GND -> t_e
         | FIN_DEF -> t_e
+        | FIN_NIL -> t_e
         | FIN_WEDGE -> (match t_e with
                           Term_bin (WEDGE, e_l, e_r) -> resolv_bin WEDGE t (e_l, e_r) p bindings'
                         | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )                  
         | FIN_VEE -> (match t_e with
-                        Term_bin (VEE, e_l, e_r) -> resolv_bin WEDGE t (e_l, e_r) p bindings'
+                        Term_bin (VEE, e_l, e_r) -> resolv_bin VEE t (e_l, e_r) p bindings'
                       | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )
-        | FIN_L -> let t1's_binding = (lkup_bindings t_e bindings')
+        | FIN_SOL -> let t1's_binding = (lkup_bindings t_e bindings')                                                                 
+                     in
+                     (match t1's_binding with
+                        None -> (match p with
+                                   Pat_una (OPT, p1) ->
+                                    raise (Failed_on_mapping_over_bindings (t_e, p1, "morph_term"))
+                                 | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
+                      | Some b_1 -> resolv b_1
+                     )
+        | FIN_L -> let t1's_binding = (lkup_bindings t_e bindings')                                                                 
                    in
                    (match t1's_binding with
                       None -> (match p with
-                                 Pat_bin (op, p_l, p_r) ->
+                                 Pat_bin (ALT, p_l, p_r) ->
                                   raise (Failed_on_mapping_over_bindings (t_e, p_l, "morph_term"))
                                | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
                     | Some b_l -> resolv b_l
@@ -153,7 +163,7 @@ let morph_term judgement =
                    )
         | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term"))           
        )
-    )
+    )   
   and resolv_bin op ter (e_l, e_r) pat bindings' = 
     let e_l's_binding = (lkup_bindings e_l bindings') in
     let e_r's_binding = (lkup_bindings e_r bindings')
