@@ -133,7 +133,25 @@ let morph_term judgement =
         | VEE -> (match t_e with
                     Term_bin (VEE, e_l, e_r) -> resolv_bin (WEDGE:term_ope) t (e_l, e_r) p bindings'
                   | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )
-        | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term"))
+        | L -> let t1's_binding = (lkup_bindings t_e bindings')
+               in
+               (match t1's_binding with
+                  None -> (match p with
+                             Pat_bin (op, p_l, p_r) ->
+                              raise (Failed_on_mapping_over_bindings (t_e, p_l, "morph_term"))
+                           | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
+                | Some b_l -> resolv b_l
+               )
+        | R -> let t1's_binding = (lkup_bindings t_e bindings')
+               in
+               (match t1's_binding with
+                  None -> (match p with
+                             Pat_bin (op, p_l, p_r) ->
+                              raise (Failed_on_mapping_over_bindings (t_e, p_r, "morph_term"))
+                           | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
+                | Some b_r -> resolv b_r
+               )
+        | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term"))           
        )
     )
   and resolv_bin op ter (e_l, e_r) pat bindings' = 
