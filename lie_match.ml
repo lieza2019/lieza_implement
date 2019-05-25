@@ -136,3 +136,9 @@ and t_Alt_xtend ter pat =
   match (match_alt (equiv_terms ter true true) pat) with
     None -> None
   | Some found -> Some found;;
+
+
+let typematch cli =
+  match cli with
+    None -> None
+  | Some CLI (ter, pat) -> tourbillon ter pat;;
