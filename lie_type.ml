@@ -26,15 +26,15 @@ type cli =
 
 
 type fin_sym =
-  | GND
-  | DEF
-  | WEDGE
-  | VEE
-  | NIL
-  | SOL
-  | INFTY
-  | L
-  | R;;
+  | FIN_GND
+  | FIN_DEF
+  | FIN_WEDGE
+  | FIN_VEE
+  | FIN_NIL
+  | FIN_SOL
+  | FIN_INFTY
+  | FIN_L
+  | FIN_R;;
   
 type binding =
   {ter:term; equ:term; pat:pattern; fin:fin_sym; bindings:binding list};;
@@ -125,32 +125,32 @@ let morph_term judgement =
     (match binding with
        {ter = t; equ = t_e; pat = p; fin = fin_sym; bindings = bindings'} ->
        (match fin_sym with
-          GND -> t_e
-        | DEF -> t_e
-        | WEDGE -> (match t_e with
-                      Term_bin (WEDGE, e_l, e_r) -> resolv_bin (WEDGE:term_ope) t (e_l, e_r) p bindings'
-                    | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )                  
-        | VEE -> (match t_e with
-                    Term_bin (VEE, e_l, e_r) -> resolv_bin (WEDGE:term_ope) t (e_l, e_r) p bindings'
-                  | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )
-        | L -> let t1's_binding = (lkup_bindings t_e bindings')
-               in
-               (match t1's_binding with
-                  None -> (match p with
-                             Pat_bin (op, p_l, p_r) ->
-                              raise (Failed_on_mapping_over_bindings (t_e, p_l, "morph_term"))
-                           | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
-                | Some b_l -> resolv b_l
-               )
-        | R -> let t1's_binding = (lkup_bindings t_e bindings')
-               in
-               (match t1's_binding with
-                  None -> (match p with
-                             Pat_bin (op, p_l, p_r) ->
-                              raise (Failed_on_mapping_over_bindings (t_e, p_r, "morph_term"))
-                           | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
-                | Some b_r -> resolv b_r
-               )
+          FIN_GND -> t_e
+        | FIN_DEF -> t_e
+        | FIN_WEDGE -> (match t_e with
+                          Term_bin (WEDGE, e_l, e_r) -> resolv_bin WEDGE t (e_l, e_r) p bindings'
+                        | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )                  
+        | FIN_VEE -> (match t_e with
+                        Term_bin (VEE, e_l, e_r) -> resolv_bin WEDGE t (e_l, e_r) p bindings'
+                      | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term")) )
+        | FIN_L -> let t1's_binding = (lkup_bindings t_e bindings')
+                   in
+                   (match t1's_binding with
+                      None -> (match p with
+                                 Pat_bin (op, p_l, p_r) ->
+                                  raise (Failed_on_mapping_over_bindings (t_e, p_l, "morph_term"))
+                               | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
+                    | Some b_l -> resolv b_l
+                   )
+        | FIN_R -> let t1's_binding = (lkup_bindings t_e bindings')
+                   in
+                   (match t1's_binding with
+                      None -> (match p with
+                                 Pat_bin (op, p_l, p_r) ->
+                                  raise (Failed_on_mapping_over_bindings (t_e, p_r, "morph_term"))
+                               | _ -> raise (Illformed_judge_detected (t, p, "morph_term")) )
+                    | Some b_r -> resolv b_r
+                   )
         | _ -> raise (Illformed_equterm_detected (t_e, p, "morph_term"))           
        )
     )

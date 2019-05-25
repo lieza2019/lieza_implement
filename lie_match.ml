@@ -36,7 +36,7 @@ and t_Atom0_xtend ter pat =
   in
   match (match_atomic (equiv_terms ter false false) pat) with
     None -> None
-  | Some found -> Some {ter = ter; equ = found; pat = pat; fin = GND; bindings = []}
+  | Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
 
 
 and t_Cas_xtend ter pat =
@@ -57,7 +57,7 @@ and t_Cas_xtend ter pat =
                                                             (match sub_bindings with
                                                                [] -> raise (Illformed_bindings_detected (t, pat, "t_Cas_xtend"))
                                                              | b -> let e = Term_bin (WEDGE, b_1st.ter, b_2nd.ter) in
-                                                                          Some {ter = t; equ = e; pat = pat; fin = WEDGE; bindings = b} )
+                                                                          Some {ter = t; equ = e; pat = pat; fin = FIN_WEDGE; bindings = b} )
                                                         )
                                        )
                                     | _ -> None
@@ -93,7 +93,7 @@ and t_Par_xtend ter pat =
                                                           (match sub_bindings with
                                                              [] -> raise (Illformed_bindings_detected (t, pat, "t_Par_xtend"))
                                                            | b -> let e = Term_bin (VEE, b_1st.ter, b_2nd.ter) in
-                                                                  Some {ter = t; equ = e; pat = pat; fin = VEE; bindings = b} )
+                                                                  Some {ter = t; equ = e; pat = pat; fin = FIN_VEE; bindings = b} )
                                                       )
                                      )
                                   | _ -> None
@@ -117,11 +117,11 @@ and t_Alt_xtend ter pat =
       Pat_bin (ALT, p_L, p_R) -> let r_L = (tourbillon t p_L)
                                  in
                                  (match r_L with
-                                    Some b_L -> Some {ter = t; equ = b_L.ter; pat = pat; fin = L; bindings = [b_L]}
+                                    Some b_L -> Some {ter = t; equ = b_L.ter; pat = pat; fin = FIN_L; bindings = [b_L]}
                                   | None -> let r_R = (tourbillon t p_R)
                                             in
                                             (match r_R with
-                                             | Some b_R -> Some {ter = t; equ = b_R.ter; pat = pat; fin = R; bindings = [b_R]}
+                                             | Some b_R -> Some {ter = t; equ = b_R.ter; pat = pat; fin = FIN_R; bindings = [b_R]}
                                              | None -> None
                                             )
                                  )
@@ -136,6 +136,8 @@ and t_Alt_xtend ter pat =
   match (match_alt (equiv_terms ter true true) pat) with
     None -> None
   | Some found -> Some found;;
+
+
 
 
 let typematch cli =
