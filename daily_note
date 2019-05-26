@@ -1,0 +1,4 @@
+2019/5/27:
+matched_form (typematch (compile "ASR_13L & LSR_23T & ((TR_22 & TUR_22) | LSR_22T) : (ASR % LSR)* & ((TR & TUR*) | LSR)"));;
+
+matched_form (typematch (compile "ASR_13L & LSR_23T & ((TR_22 & TUR_22) | LSR_22T) : (ASR % LSR)* & ((TR & TUR?) | LSR)"));;

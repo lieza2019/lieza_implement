@@ -53,7 +53,7 @@ let rec resolv binding =
                    (match t1's_binding with
                       None -> (match p with
                                  Pat_una (OPT, p1) ->
-                                  raise (Failed_on_mapping_over_bindings (t_e, p1, "resolv"))
+                                  raise (Failed_on_mapping_over_bindings (t_e, p1, "resolV"))
                                | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
                     | Some b_1 -> resolv b_1
                    )

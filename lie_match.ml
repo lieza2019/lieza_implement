@@ -233,7 +233,7 @@ and t_Opt_xtend_sol ter pat =
   in
   match (match_sol (equiv_terms ter true true) pat) with
     None -> None
-  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat)); fin = FIN_SOL; bindings = found.bindings}
+  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat)); fin = FIN_SOL; bindings = [found]}
 
 
 and t_Alt_xtend ter pat =
