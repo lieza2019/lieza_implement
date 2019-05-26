@@ -96,11 +96,11 @@ let rec set_union s1 s2 =
 let judge_union judge1 judge2 =
   match judge1 with
     None -> (match judge2 with
-               None -> []
-             | Some binding2 -> [binding2])
+               [] -> []
+             | js -> js)
   | Some binding1 -> (match judge2 with
-                        None -> [binding1]
-                      | Some binding2 -> binding1::[binding2]);;
+                        [] -> [binding1]
+                      | js -> binding1::js);;
 
 
 let lkup_bindings ter bindings =
