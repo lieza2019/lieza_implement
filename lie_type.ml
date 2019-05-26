@@ -91,14 +91,3 @@ let rec set_union s1 s2 =
   match s1 with
     [] -> s2
   | x::xs -> set_union xs (add x s2);;
-
-
-let judge_union judge1 judge2 =
-  match judge1 with
-    None -> (match judge2 with
-               [] -> []
-             | js -> js)
-  | Some binding1 -> (match judge2 with
-                        [] -> [binding1]
-                      | js -> binding1::js);;
-

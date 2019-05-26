@@ -4,6 +4,19 @@ open Lie_equiv
 
 
 
+
+let binds_union bindings1 bindings2 =
+  match bindings1 with
+    []-> (match bindings2 with
+            [] -> []
+          | bs2 -> bs2)
+  | bs1 -> match bindings2 with
+             [] -> bs1
+           | bs2 -> (bs1 @ bs2);;
+
+
+
+
 let rec is_nil t =
   match t with
     Term_ent (NIL, id, sp, ad) -> Some t
@@ -84,7 +97,7 @@ and t_Cas_xtend ter pat =
                                         | Some b_1st -> (match r_2nd with
                                                          | None -> None
                                                          | Some b_2nd ->
-                                                            let sub_bindings = (judge_union r_1st [b_2nd])
+                                                            let sub_bindings = (binds_union [b_1st] [b_2nd])
                                                             in
                                                             (match sub_bindings with
                                                                [] -> raise (Illformed_bindings_detected (t, pat, "t_Cas_xtend"))
@@ -120,7 +133,7 @@ and t_Par_xtend ter pat =
                                       | Some b_1st -> (match r_2nd with
                                                        | None -> None
                                                        | Some b_2nd ->
-                                                          let sub_bindings = (judge_union r_1st [b_2nd])
+                                                          let sub_bindings = (binds_union [b_1st] [b_2nd])
                                                           in
                                                           (match sub_bindings with
                                                              [] -> raise (Illformed_bindings_detected (t, pat, "t_Par_xtend"))
@@ -182,7 +195,7 @@ and t_Cat0_xtend_infty ter pat =
         | None -> None
         | Some b_h -> (match r_t with
                        | None -> None
-                       | Some b_t -> let sub_bindings = (judge_union r_h b_t.bindings)
+                       | Some b_t -> let sub_bindings = (binds_union [b_h] b_t.bindings)
                                      in
                                      (match sub_bindings with
                                         [] -> raise (Illformed_bindings_detected (t, pat, "t_Cat0_xtend_infty"))

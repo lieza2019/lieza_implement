@@ -8,4 +8,5 @@
 open Lie_type;;
 open Lie_equiv;;
 open Lie_match;;
+open Lie_resolv;;
 open Lie_main;;
