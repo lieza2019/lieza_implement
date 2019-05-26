@@ -37,7 +37,7 @@ let rec tourbillon ter pat =
                               Some judge_matched -> Some judge_matched
                             | None -> (match (t_Cat0_xtend_sol ter p_1) with
                                          Some judge_matched -> Some judge_matched
-                                       |  None -> (match (t_Cat0_xtend_sol ter p_1) with
+                                       |  None -> (match (t_Cat0_xtend_infty ter p_1) with
                                                      None -> None
                                                    | Some judge_matched -> Some judge_matched) ) )
   | Pat_bin (ALT, p_L, p_R) -> (match (t_Alt_xtend ter pat) with
@@ -159,13 +159,22 @@ and t_Cat0_xtend_sol ter pat =
   in
   match (match_sol (equiv_terms ter true true) pat) with
     None -> None
-  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat)); fin = FIN_SOL; bindings = found.bindings}
+  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat)); fin = FIN_SOL; bindings = [found]}
 
 
 and t_Cat0_xtend_infty ter pat =
+  let disbumping ter =
+    match ter with
+      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
+       (match t_t with
+          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
+        | _ -> None)
+    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
+    | _ -> None
+  in
   let rec cmp_cat0 t pat =
-    match t with
-      Term_bin (WEDGE, t_h, t_t) ->
+    match (disbumping t) with
+      Some (t_h, t_t) ->
        let r_h = (tourbillon t_h pat) in
        let r_t = (tourbillon t_t (Pat_una (STAR, pat)))
        in
