@@ -1,4 +1,3 @@
-
 open Lie_type
 open Lie_equiv
 
@@ -53,6 +52,16 @@ let rec tourbillon ter pat =
                                        |  None -> (match (t_Cat0_xtend_infty ter p_1) with
                                                      None -> None
                                                    | Some judge_matched -> Some judge_matched) ) )
+  | Pat_una (CROSS, p_1) -> (match (t_Cat1_xtend_sol ter p_1) with
+                               Some judge_matched -> Some judge_matched
+                             |  None -> (match (t_Cat1_xtend_infty ter p_1) with
+                                           None -> None
+                                         | Some judge_matched -> Some judge_matched) )
+  | Pat_una (STROK, p_1) -> (match (t_Dup_xtend_sol ter p_1) with
+                               Some judge_matched -> Some judge_matched
+                             |  None -> (match (t_Dup_xtend_infty ter p_1) with
+                                           None -> None
+                                         | Some judge_matched -> Some judge_matched) )
   | Pat_bin (ALT, p_L, p_R) -> (match (t_Alt_xtend ter pat) with
                                   None -> None
                                 | Some judge_matched -> Some judge_matched)
@@ -213,6 +222,118 @@ and t_Cat0_xtend_infty ter pat =
                  | None -> match_cat0 xs pat
   in
   match (match_cat0 (equiv_terms ter true true) pat) with
+    None -> None
+  | Some found -> Some found
+
+
+and t_Cat1_xtend_sol ter pat =
+  let rec match_sol tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> (match (tourbillon x pat) with
+                    Some found -> Some found
+                  | None -> match_sol xs pat)
+  in
+  match (match_sol (equiv_terms ter true true) pat) with
+    None -> None
+  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat)); fin = FIN_SOL; bindings = [found]}
+
+
+and t_Cat1_xtend_infty ter pat =
+  let disbumping ter =
+    match ter with
+      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
+       (match t_t with
+          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
+        | _ -> None)
+    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
+    | _ -> None
+  in
+  let rec cmp_cat1 t pat =
+    match (disbumping t) with
+      Some (t_h, t_t) ->
+       let r_h = (tourbillon t_h pat) in
+       let r_t = (tourbillon t_t (Pat_una (CROSS, pat)))
+       in
+       (match r_h with
+        | None -> None
+        | Some b_h -> (match r_t with
+                       | None -> None
+                       | Some b_t -> let sub_bindings = (binds_union [b_h] b_t.bindings)
+                                     in
+                                     (match sub_bindings with
+                                        [] -> raise (Illformed_bindings_detected (t, pat, "t_Cat1_xtend_infty"))
+                                      | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
+                                             in
+                                             Some {ter = t; equ = e; pat = Pat_una (CROSS, pat); fin = FIN_INFTY; bindings = b}
+                                     )
+                      )
+       )
+    | _ -> None
+  and match_cat1 tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> match (cmp_cat1 x pat) with
+                   Some found -> Some found
+                 | None -> match_cat1 xs pat
+  in
+  match (match_cat1 (equiv_terms ter true true) pat) with
+    None -> None
+  | Some found -> Some found
+
+
+and t_Dup_xtend_sol ter pat =
+  let rec match_sol tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> (match (tourbillon x pat) with
+                    Some found -> Some found
+                  | None -> match_sol xs pat)
+  in
+  match (match_sol (equiv_terms ter true true) pat) with
+    None -> None
+  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat)); fin = FIN_SOL; bindings = [found]}
+
+
+and t_Dup_xtend_infty ter pat =
+  let disbumping ter =
+    match ter with
+      Term_bin (VEE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
+       (match t_t with
+          Term_bin (VEE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
+        | _ -> None)
+    | Term_bin (VEE, t_h, t_t) -> Some (t_h, t_t)
+    | _ -> None
+  in
+  let rec cmp_dup t pat =
+    match (disbumping t) with
+      Some (t_h, t_t) ->
+       let r_h = (tourbillon t_h pat) in
+       let r_t = (tourbillon t_t (Pat_una (STROK, pat)))
+       in
+       (match r_h with
+        | None -> None
+        | Some b_h -> (match r_t with
+                       | None -> None
+                       | Some b_t -> let sub_bindings = (binds_union [b_h] b_t.bindings)
+                                     in
+                                     (match sub_bindings with
+                                        [] -> raise (Illformed_bindings_detected (t, pat, "t_Dup_xtend_infty"))
+                                      | b -> let e = Term_bin (VEE, b_h.ter, b_t.equ)
+                                             in
+                                             Some {ter = t; equ = e; pat = Pat_una (STROK, pat); fin = FIN_INFTY; bindings = b}
+                                     )
+                      )
+       )
+    | _ -> None
+  and match_dup tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> match (cmp_dup x pat) with
+                   Some found -> Some found
+                 | None -> match_dup xs pat
+  in
+  match (match_dup (equiv_terms ter true true) pat) with
     None -> None
   | Some found -> Some found
 
