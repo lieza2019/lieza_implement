@@ -61,10 +61,10 @@ let rec pat_ident p1 p2 =
                                 | _ -> false )
   | Pat_una (op1, p1_pri) -> (match p2 with
                                 Pat_una (op2, p2_pri) -> ((op1 = op2) && (pat_ident p1_pri p2_pri))
-                              | _ -> false)
+                              | _ -> false )
   | Pat_bin (op1, p1_l, p1_r) -> (match p2 with
                                     Pat_bin (op2, p2_l, p2_r) -> ((op1 = op2) && (pat_ident p1_l p2_l) && (pat_ident p1_r p2_r))
-                                  | _ -> false)
+                                  | _ -> false )
 
 
 let rec term_ident t1 t2 =
@@ -74,11 +74,11 @@ let rec term_ident t1 t2 =
                                       | _ -> false )
   | Term_una (op1, t1_pri) -> (match t2 with
                                  Term_una (op2, t2_pri) -> ((op1 = op2) && (term_ident t1_pri t2_pri))
-                               | _ -> false)
+                               | _ -> false )
   | Term_bin (op1, t1_l, t1_r) -> (match t2 with
                                      Term_bin (op2, t2_l, t2_r) ->
                                       ((op1 == op2) && (term_ident t1_l t2_l) && (term_ident t1_r t2_r))
-                                   | _ -> false)
+                                   | _ -> false )
 
 
 let rec set_sub s1 s2 =
@@ -104,4 +104,3 @@ let rec set_union s1 s2 =
   match s1 with
     [] -> s2
   | x::xs -> set_union xs (add x s2);;
-
