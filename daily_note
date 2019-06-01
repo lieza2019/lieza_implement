@@ -8,3 +8,8 @@ p-182: matched_form (typematch (compile "ASR_13L & LSR_23T & ((TR_22 & TUR_22) |
 p-106: typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)");;
 
 typematch (compile "(LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) : (LR | (NKR % RKR)!)+");;
+
+matched_form (typematch (compile "HR_11L & (((LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22)) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L)) : HR & ((LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR))"));;
+
+
+2019/5/31:

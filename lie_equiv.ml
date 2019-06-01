@@ -2,6 +2,8 @@
 open Lie_type
 
 
+
+
 let rec equiv_assoc_cas t =
   let is_deadend t =
     match t with
@@ -25,7 +27,7 @@ let rec equiv_assoc_cas t =
      else
        let l = Term_bin (WEDGE, ll, lr) in
        equiv_assoc_cas_ind ((l, r)::(assoc_cas_family l r))
-       
+  
   | Term_bin (WEDGE, l, Term_bin (WEDGE, rl, rr)) ->
      if ((is_deadend l) && (is_deadend rl) && (is_deadend rr)) then
        [Term_bin (WEDGE, Term_bin (WEDGE, l, rl), rr); t]
@@ -103,16 +105,7 @@ and assoc_cas_family l r =
 and equiv_assoc_cas_ind ts =
   match ts with
     [] -> []
-  | (pl, pr)::ps -> (merge_wedge (equiv_assoc_cas pl) (equiv_assoc_cas pr)) @ (equiv_assoc_cas_ind ps)
-and merge_wedge tr_l tr_r =
-  let rec attach l tr_r =
-    match tr_r with
-      [] -> []
-    | r::rs -> (Term_bin (WEDGE, l, r))::(attach l rs)
-  in
-  match tr_l with
-    [] -> []
-  | l::ls -> (attach l tr_r) @ (merge_wedge ls tr_r);;
+  | (pl, pr)::ps -> (Term_bin (WEDGE, pl, pr))::(equiv_assoc_cas_ind ps);;
 
 
 
@@ -218,36 +211,17 @@ and assoc_par_family l r =
 and equiv_assoc_par_ind ts =
   match ts with
     [] -> []
-  | (pl, pr)::ps -> (merge_vee (equiv_assoc_par pl) (equiv_assoc_par pr)) @ (equiv_assoc_par_ind ps)
-and merge_vee tr_l tr_r =
-  let rec attach l tr_r =
-    match tr_r with
-      [] -> []
-    | r::rs -> (Term_bin (VEE, l, r))::(attach l rs)
-  in
-  match tr_l with
-    [] -> []
-  | l::ls -> (attach l tr_r) @ (merge_vee ls tr_r);;
+  | (pl, pr)::ps -> (Term_bin (VEE, pl, pr))::(equiv_assoc_par_ind ps);;
 
 
 
 
-let rec equiv_assocs t =
-  let rec equiv_assoc_cas_lst tl =
-    match tl with
-      [] -> []
-    | t::ts -> set_union (equiv_assoc_cas t) (equiv_assoc_cas_lst ts)
-  in
-  let rec equiv_assoc_par_lst tl =
-    match tl with
-      [] -> []
-    | t::ts -> set_union (equiv_assoc_par t) (equiv_assoc_par_lst ts)
-  in
+let equiv_assocs t =
   match t with
     Term_ent (op, id, sp, ad) -> [t]
   | Term_una (op, t1) -> [t]
-  | Term_bin (WEDGE, l, r) -> equiv_assoc_cas_lst (merge_wedge (equiv_assocs l) (equiv_assocs r))
-  | Term_bin (VEE, l, r) -> equiv_assoc_par_lst (merge_vee (equiv_assocs l) (equiv_assocs r))
+  | Term_bin (WEDGE, l, r) -> equiv_assoc_cas t
+  | Term_bin (VEE, l, r) -> equiv_assoc_par t
   | Term_bin (_, l, r) -> [t];;
 
 
@@ -293,6 +267,24 @@ and gath_equivs t =
                  ) @ (gath_equ_ph2 es)
   in
   gath_equ_ph2 equ_ph1
+and merge_wedge tr_l tr_r =
+  let rec attach l tr_r =
+    match tr_r with
+      [] -> []
+    | r::rs -> (Term_bin (WEDGE, l, r))::(attach l rs)
+  in
+  match tr_l with
+    [] -> []
+  | l::ls -> (attach l tr_r) @ (merge_wedge ls tr_r)
+and merge_vee tr_l tr_r =
+  let rec attach l tr_r =
+    match tr_r with
+      [] -> []
+    | r::rs -> (Term_bin (VEE, l, r))::(attach l rs)
+  in
+  match tr_l with
+    [] -> []
+  | l::ls -> (attach l tr_r) @ (merge_vee ls tr_r)
 
     
 (* gathering by "RevealH-Cas/Par" and "RevealT-Cas/Par" *)

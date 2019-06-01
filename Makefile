@@ -51,3 +51,4 @@ clean:
 	-$(RM) *.cmi
 	-$(RM) *.cmo
 	-$(RM) *~
+	-$(RM) #*
