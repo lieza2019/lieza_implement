@@ -54,6 +54,19 @@ let rec set_nelems tl =
   | (t::ts) -> (set_nelems ts) + 1
 
 
+let rec pat_ident p1 p2 =
+  match p1 with
+    Pat_ent (op1, id1, ad1) -> (match p2 with
+                                  Pat_ent (op2, id2, ad2) -> ((op1 = op2) && (id1 = id2))
+                                | _ -> false )
+  | Pat_una (op1, p1_pri) -> (match p2 with
+                                Pat_una (op2, p2_pri) -> ((op1 = op2) && (pat_ident p1_pri p2_pri))
+                              | _ -> false)
+  | Pat_bin (op1, p1_l, p1_r) -> (match p2 with
+                                    Pat_bin (op2, p2_l, p2_r) -> ((op1 = op2) && (pat_ident p1_l p2_l) && (pat_ident p1_r p2_r))
+                                  | _ -> false)
+
+
 let rec term_ident t1 t2 =
   match t1 with
     Term_ent (op1, id1, sp1, ad1) -> (match t2 with
@@ -91,3 +104,4 @@ let rec set_union s1 s2 =
   match s1 with
     [] -> s2
   | x::xs -> set_union xs (add x s2);;
+

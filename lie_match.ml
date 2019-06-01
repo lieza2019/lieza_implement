@@ -1,3 +1,4 @@
+
 open Lie_type
 open Lie_equiv
 
@@ -33,7 +34,7 @@ let rec is_nil t =
 
 
 
-
+(* THE COMPLEX OF WISDOM *)
 let rec tourbillon ter pat =
   match pat with
     Pat_ent (ENT, id, ad) -> (match (t_Atom0_xtend ter pat) with

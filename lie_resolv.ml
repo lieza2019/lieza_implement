@@ -116,16 +116,81 @@ and resolv_n'ary op ter (e_l, e_r) pat bindings' =
                | _ -> raise (Illformed_judge_detected (ter, pat, "resolv_n'ary")) )
   | Some b_l -> let bindings'' = (bindings_sub [b_l] bindings')
                 in
-                match bindings'' with
-                  (b_t'::bs) -> (match bs with
-                                   [] -> Term_bin (op, (resolv b_l), (resolv b_t'))
-                                 | b_t_t'' -> let b_t = {ter = e_r; equ = e_r; pat = pat; fin = FIN_INFTY; bindings = bindings''}
-                                              in
-                                              Term_bin (op, (resolv b_l), (resolv b_t))
-                                );;
+                (match bindings'' with
+                   (b_t'::bs) -> (match bs with
+                                    [] -> Term_bin (op, (resolv b_l), (resolv b_t'))
+                                  | b_t_t'' -> let b_t = {ter = e_r; equ = e_r; pat = pat; fin = FIN_INFTY; bindings = bindings''}
+                                               in
+                                               Term_bin (op, (resolv b_l), (resolv b_t)) )
+                 | _ -> raise (Illformed_bindings_detected (ter, pat, "resolv_n'ary")) );;
 
 
 let matched_form judgement =
   match judgement with
     None -> None
   | Some binding -> Some (resolv binding);;
+
+
+let rec consult_bindings pat judgement =
+  match judgement with
+    None -> None
+  | Some binding -> match binding with
+                      {ter = t; pat = p; bindings = bindings'} ->
+                      if (pat_ident pat p) then (matched_form (Some binding))
+                      else
+                        (match p with
+                           Pat_ent (ENT, id, ad) -> None
+                         | Pat_bin (WEDGE, p_1, p_2) ->
+                            (match bindings' with
+                               (b_1::b_2::[]) -> let r_1 = (consult_bindings pat (Some b_1))
+                                                 in
+                                                 (match r_1 with
+                                                    None -> (consult_bindings pat (Some b_2))
+                                                  | _ -> r_1)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | Pat_bin (VEE, p_1, p_2) ->
+                            (match bindings' with
+                               (b_1::b_2::[]) -> let r_1 = (consult_bindings pat (Some b_1))
+                                                 in
+                                                 (match r_1 with
+                                                    None -> (consult_bindings pat (Some b_2))
+                                                  | _ -> r_1)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | Pat_una (STAR, p_1) ->
+                            (match bindings' with
+                               [] -> None
+                             | (b_sol::[]) -> consult_bindings pat (Some b_sol)
+                             | (b_h::b_t'::[]) -> let r_h = (consult_bindings pat (Some b_h))
+                                                  in
+                                                  (match r_h with
+                                                     None -> (consult_bindings pat (Some b_t'))
+                                                   | _ -> r_h)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | Pat_una (CROSS, p_1) ->
+                            (match bindings' with
+                               (b_sol::[]) -> consult_bindings pat (Some b_sol)
+                             | (b_h::b_t'::[]) -> let r_h = (consult_bindings pat (Some b_h))
+                                                  in
+                                                  (match r_h with
+                                                     None -> (consult_bindings pat (Some b_t'))
+                                                   | _ -> r_h)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | Pat_una (STROK, p_1) ->
+                            (match bindings' with
+                               (b_sol::[]) -> consult_bindings pat (Some b_sol)
+                             | (b_h::b_t'::[]) -> let r_h = (consult_bindings pat (Some b_h))
+                                                  in
+                                                  (match r_h with
+                                                     None -> (consult_bindings pat (Some b_t'))
+                                                   | _ -> r_h)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | Pat_bin (ALT, p_L, p_R) ->
+                            (match bindings' with
+                               (b_alt::[]) -> consult_bindings pat (Some b_alt)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | Pat_una (OPT, p_1) ->
+                            (match bindings' with
+                               (b_opt::[]) -> consult_bindings pat (Some b_opt)
+                             | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
+                         | _ -> raise (Illegal_pat_detected (t, p, "consult_bindings"))
+                        );;
