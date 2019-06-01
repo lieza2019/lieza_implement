@@ -24,12 +24,12 @@ let carve_pat pat =
   let rec carving p n =
     match p with
       Pat_ent (op, id, _) -> (Pat_ent (op, id, n), n + 1)
-    | Pat_una (op, p1) -> (match (carving p1 n) with
-                             (p1', n') -> (Pat_una (op, p1'), n'))
-    | Pat_bin (op, pl, pr) -> (match (carving pr n) with
-                                 (pr', n') -> (match (carving pl n') with
-                                                 (pl', n'') -> (Pat_bin (op, pl', pr'), n''))
-                              )
+    | Pat_una (op, p1, _) -> (match (carving p1 n) with
+                                (p1', n') -> (Pat_una (op, p1', n'), n' + 1) )
+    | Pat_bin (op, pl, pr, _) -> (match (carving pr n) with
+                                    (pr', n') -> (match (carving pl n') with
+                                                    (pl', n'') -> (Pat_bin (op, pl', pr',n'), n' + 1) )
+                                 )
   in
   match (carving pat pat_addr_initial) with
     (carved_pat, m) -> carved_pat;;
@@ -61,7 +61,7 @@ let cli src =
                      None;;
 let compile src =
   match (cli src) with
-    Some CLI (ter, pat) -> Some (CLI( (carve_term ter), (carve_pat pat) ))
+    Some CLI (ter, pat) -> Some (CLI( (carve_term ter), pat ))
   | None -> None;;
 
 
