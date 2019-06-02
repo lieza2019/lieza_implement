@@ -227,20 +227,12 @@ let equiv_assocs t =
 
 
 
-let rec equiv_terms t ena_trans ena_bumpup =
-  (* gathering by "PhonyH-Cas/Par" and "PhonyT-Cas/Par" *)
-  let rec gath_equ_trans equivs =
-    match equivs with
-      [] -> []
-    | (e::es) -> (gath_equivs e) @ (gath_equ_trans es)
+let rec equiv_terms t ena_bumpup =
+  let equivs = (gath_equivs t) in
+  let equ_ph3 = (gath_equ_ph3 equivs) in
+  let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equivs) else equivs
   in
-  let equivs = gath_equivs t in
-  let equivs' = if false then (set_union [t] (gath_equ_trans (set_sub [t] equivs))) else equivs
-  in
-  let equ_ph3 = (gath_equ_ph3 equivs') in
-  let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equivs') else equivs'
-  in
-  set_union equivs' (set_union equ_ph3 equ_ph4)
+  set_union equivs (set_union equ_ph3 equ_ph4)
 
 
 and gath_equivs t =  

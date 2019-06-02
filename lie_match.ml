@@ -89,7 +89,7 @@ and t_Atom0_xtend ter pat =
                   | None -> match_atomic xs pat)
 
   in
-  match (match_atomic (equiv_terms ter false false) pat) with
+  match (match_atomic (equiv_terms ter false) pat) with
     None -> None
   | Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
 
@@ -126,7 +126,7 @@ and t_Cas_xtend ter pat =
                    Some found -> Some found
                  | None -> match_cat xs pat
   in
-  match (match_cat (equiv_terms ter true true) pat) with
+  match (match_cat (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some found
 
@@ -163,7 +163,7 @@ and t_Par_xtend ter pat =
                    Some found -> Some found
                  | None -> match_par xs pat
   in
-  match (match_par (equiv_terms ter true true) pat) with
+  match (match_par (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some found
 
@@ -182,7 +182,7 @@ and t_Cat0_xtend_sol ter pat =
                     Some found -> Some found
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true true) pat) with
+  match (match_sol (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
 
@@ -225,7 +225,7 @@ and t_Cat0_xtend_infty ter pat =
                    Some found -> Some found
                  | None -> match_cat0 xs pat
   in
-  match (match_cat0 (equiv_terms ter true true) pat) with
+  match (match_cat0 (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some found
 
@@ -238,7 +238,7 @@ and t_Cat1_xtend_sol ter pat =
                     Some found -> Some found
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true true) pat) with
+  match (match_sol (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
 
@@ -282,7 +282,7 @@ and t_Cat1_xtend_infty ter pat =
                    Some found -> Some found
                  | None -> match_cat1 xs pat
   in
-  match (match_cat1 (equiv_terms ter true true) pat) with
+  match (match_cat1 (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some found
 
@@ -295,7 +295,7 @@ and t_Dup_xtend_sol ter pat =
                     Some found -> Some found
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true true) pat) with
+  match (match_sol (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
 
@@ -339,7 +339,7 @@ and t_Dup_xtend_infty ter pat =
                    Some found -> Some found
                  | None -> match_dup xs pat
   in
-  match (match_dup (equiv_terms ter true true) pat) with
+  match (match_dup (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some found
 
@@ -358,7 +358,7 @@ and t_Opt_xtend_sol ter pat =
                     Some found -> Some found
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true true) pat) with
+  match (match_sol (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
 
@@ -385,7 +385,7 @@ and t_Alt_xtend ter pat =
                    Some found -> Some found
                  | None -> match_alt xs pat
   in
-  match (match_alt (equiv_terms ter true true) pat) with
+  match (match_alt (equiv_terms ter true) pat) with
     None -> None
   | Some found -> Some found;;
 
