@@ -13,3 +13,9 @@ matched_form (typematch (compile "HR_11L & (((LR_11 | RKR_21) & (LR_12 | NKR_21 
 
 
 2019/5/31:
+
+2019/6/1:
+  typematch (compile "HR_11L & HR_12L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)");;
+
+2019/6/2:
+ typematch (compile "TR_11i & ASR_1R & MSlR_1RM & RSR_11T & WLR_11 & (KR_11 & TR_1R & RR_1) : TR* & ASR & MSlR* & (LSR % RSR)* & WLR & (KR & TR)* & RR");;

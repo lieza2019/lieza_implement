@@ -235,7 +235,7 @@ let rec equiv_terms t ena_trans ena_bumpup =
     | (e::es) -> (gath_equivs e) @ (gath_equ_trans es)
   in
   let equivs = gath_equivs t in
-  let equivs' = if ena_trans then (set_union [t] (gath_equ_trans (set_sub [t] equivs))) else equivs
+  let equivs' = if false then (set_union [t] (gath_equ_trans (set_sub [t] equivs))) else equivs
   in
   let equ_ph3 = (gath_equ_ph3 equivs') in
   let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equivs') else equivs'
@@ -253,16 +253,8 @@ and gath_equivs t =
     | (e::es) -> (match e with
                   | Term_ent (op, id, sp, ad) -> [e]
                   | Term_una (op, t1) -> [e]
-                  | Term_bin (WEDGE, tl, tr) -> (
-                    let equ_l = (gath_equivs tl) in
-                    let equ_r = (gath_equivs tr)
-                    in
-                    merge_wedge equ_l equ_r )
-                  | Term_bin (VEE, tl, tr) -> (
-                    let equ_l = (gath_equivs tl) in
-                    let equ_r = (gath_equivs tr)
-                    in
-                    merge_vee equ_l equ_r )
+                  | Term_bin (WEDGE, tl, tr) -> [e]
+                  | Term_bin (VEE, tl, tr) -> [e]
                   | Term_bin (_, _, _) -> [e]
                  ) @ (gath_equ_ph2 es)
   in
@@ -304,7 +296,7 @@ and gath_equ_ph3 equivs =
 and gath_equ_ph4 equivs =
   let rec max_addr_term ter =
     match ter with
-      Term_ent (_, _, _, id) -> id
+      Term_ent (_, _, _, ad) -> ad
     | Term_una (_, t1) -> max_addr_term t1
     | Term_bin (_, tl, tr) -> let max_l = (max_addr_term tl) in
                               let max_r = (max_addr_term tr)

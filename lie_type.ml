@@ -13,8 +13,8 @@ type term_ope =
 
 type pattern =
   | Pat_ent of term_ope * string * int
-  | Pat_una of term_ope * pattern
-  | Pat_bin of term_ope * pattern * pattern;;
+  | Pat_una of term_ope * pattern * int
+  | Pat_bin of term_ope * pattern * pattern * int
 
 type term =
   | Term_ent of term_ope * string * string * int
@@ -59,12 +59,12 @@ let rec pat_ident p1 p2 =
     Pat_ent (op1, id1, ad1) -> (match p2 with
                                   Pat_ent (op2, id2, ad2) -> ((op1 = op2) && (id1 = id2))
                                 | _ -> false )
-  | Pat_una (op1, p1_pri) -> (match p2 with
-                                Pat_una (op2, p2_pri) -> ((op1 = op2) && (pat_ident p1_pri p2_pri))
-                              | _ -> false )
-  | Pat_bin (op1, p1_l, p1_r) -> (match p2 with
-                                    Pat_bin (op2, p2_l, p2_r) -> ((op1 = op2) && (pat_ident p1_l p2_l) && (pat_ident p1_r p2_r))
-                                  | _ -> false )
+  | Pat_una (op1, p1_pri, ad1) -> (match p2 with
+                                     Pat_una (op2, p2_pri, ad2) -> ((op1 = op2) && (pat_ident p1_pri p2_pri))
+                                   | _ -> false )
+  | Pat_bin (op1, p1_l, p1_r, ad1) -> (match p2 with
+                                         Pat_bin (op2, p2_l, p2_r, ad2) -> ((op1 = op2) && (pat_ident p1_l p2_l) && (pat_ident p1_r p2_r))
+                                       | _ -> false )
 
 
 let rec term_ident t1 t2 =

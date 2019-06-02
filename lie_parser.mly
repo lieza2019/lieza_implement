@@ -61,11 +61,11 @@ expr_strok_lst:
 expr_pat:
   IDENT1    { Pat_ent (ENT, $1, -1) }
 | LPAR expr_pat RPAR    { $2 }
-| expr_pat STAR    { Pat_una (STAR, $1) }
-| expr_pat CROSS    { Pat_una (CROSS, $1) }
-| expr_pat STROK    { Pat_una (STROK, $1) }
-| expr_pat OPT    { Pat_una (OPT, $1) }
-| expr_pat ALT expr_pat    { Pat_bin (ALT, $1, $3) }
-| expr_pat WEDGE expr_pat    { Pat_bin (WEDGE, $1, $3) }
-| expr_pat VEE expr_pat    { Pat_bin (VEE, $1, $3) }
+| expr_pat STAR    { Pat_una (STAR, $1, -1) }
+| expr_pat CROSS    { Pat_una (CROSS, $1, -1) }
+| expr_pat STROK    { Pat_una (STROK, $1, -1) }
+| expr_pat OPT    { Pat_una (OPT, $1, -1) }
+| expr_pat ALT expr_pat    { Pat_bin (ALT, $1, $3, -1) }
+| expr_pat WEDGE expr_pat    { Pat_bin (WEDGE, $1, $3, -1) }
+| expr_pat VEE expr_pat    { Pat_bin (VEE, $1, $3, -1) }
 ;

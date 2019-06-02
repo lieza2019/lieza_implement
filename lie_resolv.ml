@@ -52,7 +52,7 @@ let rec resolv binding =
                    in
                    (match t1's_binding with
                       None -> (match p with
-                                 Pat_una (OPT, p1) ->
+                                 Pat_una (OPT, p1, ad) ->
                                   raise (Failed_on_mapping_over_bindings (t_e, p1, "resolV"))
                                | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
                     | Some b_1 -> resolv b_1
@@ -65,7 +65,7 @@ let rec resolv binding =
                  in
                  (match t1's_binding with
                     None -> (match p with
-                               Pat_bin (ALT, p_l, p_r) ->
+                               Pat_bin (ALT, p_l, p_r, ad) ->
                                 raise (Failed_on_mapping_over_bindings (t_e, p_l, "resolv"))
                              | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
                   | Some b_l -> resolv b_l
@@ -74,7 +74,7 @@ let rec resolv binding =
                  in
                  (match t1's_binding with
                     None -> (match p with
-                               Pat_bin (op, p_l, p_r) ->
+                               Pat_bin (op, p_l, p_r, ad) ->
                                 raise (Failed_on_mapping_over_bindings (t_e, p_r, "resolv"))
                              | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
                   | Some b_r -> resolv b_r
@@ -90,12 +90,12 @@ and resolv_bin op ter (e_l, e_r) pat bindings' =
   in
   match e_l's_binding with
     None -> (match pat with
-               Pat_bin (op, p_l, p_r) ->
+               Pat_bin (op, p_l, p_r, ad) ->
                 raise (Failed_on_mapping_over_bindings (e_l, p_l, "resolv_bin"))
              | _ -> raise (Illformed_judge_detected (ter, pat, "resolv_bin")) )
   | Some b_l -> (match e_r's_binding with
                    None -> (match pat with
-                              Pat_bin (op, p_l, p_r) ->
+                              Pat_bin (op, p_l, p_r, ad) ->
                                raise (Failed_on_mapping_over_bindings (e_r, p_r, "resolv_bin"))
                             | _ -> raise (Illformed_judge_detected (ter, pat, "resolv_bin")) )
                  | Some b_r -> Term_bin (op, (resolv b_l), (resolv b_r)) )
@@ -107,12 +107,12 @@ and resolv_n'ary op ter (e_l, e_r) pat bindings' =
   match e_l's_binding with
     None -> if (op = WEDGE) then
               (match pat with
-                 Pat_una (STAR, p1) -> raise (Failed_on_mapping_over_bindings (e_l, p1, "resolv_n'ary"))
-               | Pat_una (CROSS, p1) -> raise (Failed_on_mapping_over_bindings (e_l, p1, "resolv_n'ary"))                                     
+                 Pat_una (STAR, p1, ad) -> raise (Failed_on_mapping_over_bindings (e_l, p1, "resolv_n'ary"))
+               | Pat_una (CROSS, p1, ad) -> raise (Failed_on_mapping_over_bindings (e_l, p1, "resolv_n'ary"))                                     
                | _ -> raise (Illformed_judge_detected (ter, pat, "resolv_n'ary")) )
             else
               (match pat with
-                 Pat_una (STROK, p1) -> raise (Failed_on_mapping_over_bindings (e_l, p1, "resolv_n'ary"))
+                 Pat_una (STROK, p1, ad) -> raise (Failed_on_mapping_over_bindings (e_l, p1, "resolv_n'ary"))
                | _ -> raise (Illformed_judge_detected (ter, pat, "resolv_n'ary")) )
   | Some b_l -> let bindings'' = (bindings_sub [b_l] bindings')
                 in
@@ -140,7 +140,7 @@ let rec consult_bindings pat judgement =
                       else
                         (match p with
                            Pat_ent (ENT, id, ad) -> None
-                         | Pat_bin (WEDGE, p_1, p_2) ->
+                         | Pat_bin (WEDGE, p_1, p_2, ad) ->
                             (match bindings' with
                                (b_1::b_2::[]) -> let r_1 = (consult_bindings pat (Some b_1))
                                                  in
@@ -148,7 +148,7 @@ let rec consult_bindings pat judgement =
                                                     None -> (consult_bindings pat (Some b_2))
                                                   | _ -> r_1)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
-                         | Pat_bin (VEE, p_1, p_2) ->
+                         | Pat_bin (VEE, p_1, p_2, ad) ->
                             (match bindings' with
                                (b_1::b_2::[]) -> let r_1 = (consult_bindings pat (Some b_1))
                                                  in
@@ -156,7 +156,7 @@ let rec consult_bindings pat judgement =
                                                     None -> (consult_bindings pat (Some b_2))
                                                   | _ -> r_1)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
-                         | Pat_una (STAR, p_1) ->
+                         | Pat_una (STAR, p_1, ad) ->
                             (match bindings' with
                                [] -> None
                              | (b_sol::[]) -> consult_bindings pat (Some b_sol)
@@ -166,7 +166,7 @@ let rec consult_bindings pat judgement =
                                                      None -> (consult_bindings pat (Some b_t'))
                                                    | _ -> r_h)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
-                         | Pat_una (CROSS, p_1) ->
+                         | Pat_una (CROSS, p_1, ad) ->
                             (match bindings' with
                                (b_sol::[]) -> consult_bindings pat (Some b_sol)
                              | (b_h::b_t'::[]) -> let r_h = (consult_bindings pat (Some b_h))
@@ -175,7 +175,7 @@ let rec consult_bindings pat judgement =
                                                      None -> (consult_bindings pat (Some b_t'))
                                                    | _ -> r_h)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
-                         | Pat_una (STROK, p_1) ->
+                         | Pat_una (STROK, p_1, ad) ->
                             (match bindings' with
                                (b_sol::[]) -> consult_bindings pat (Some b_sol)
                              | (b_h::b_t'::[]) -> let r_h = (consult_bindings pat (Some b_h))
@@ -184,11 +184,11 @@ let rec consult_bindings pat judgement =
                                                      None -> (consult_bindings pat (Some b_t'))
                                                    | _ -> r_h)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
-                         | Pat_bin (ALT, p_L, p_R) ->
+                         | Pat_bin (ALT, p_L, p_R, ad) ->
                             (match bindings' with
                                (b_alt::[]) -> consult_bindings pat (Some b_alt)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
-                         | Pat_una (OPT, p_1) ->
+                         | Pat_una (OPT, p_1, ad) ->
                             (match bindings' with
                                (b_opt::[]) -> consult_bindings pat (Some b_opt)
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
