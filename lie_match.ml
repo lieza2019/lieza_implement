@@ -35,14 +35,15 @@ let rec is_nil t =
 
 
 
-let rec revolver (ter_orig, ter_crnt, assoc_dir) pat =
-  let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) false)
+
+let rec revolver (ter_orig, ter_crnt, assoc_dir, ena_bumpup) cmp pat =
+  let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup)
   in
   match equivs with
     (None, _, _) -> None
-  | (Some ter', es, dir) -> match (match_atomic es) with
-                              Some found -> Some {ter = ter_orig; equ = found; pat = pat; fin = FIN_GND; bindings = []}
-                            | None -> foo (ter_orig, (Some ter'), dir) pat;;
+  | (Some ter', es, dir) -> match (cmp es pat) with
+                              Some found -> Some found;
+                            | None -> revolver (ter_orig, (Some ter'), dir, ena_bumpup) cmp pat;;
 
 
 
@@ -98,13 +99,11 @@ and t_Atom0_xtend ter pat =
     match tl with
       [] -> None
     | (x::xs) -> (match (cmp_atomic x pat) with
-                    Some found -> Some found
+                    Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
                   | None -> match_atomic xs pat)
 
   in
-  match (match_atomic (equiv_terms ter false) pat) with
-    None -> None
-  | Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
+  revolver (ter, None, L2R, false) match_atomic pat
 
 
 and t_Cas_xtend ter pat =
@@ -139,9 +138,7 @@ and t_Cas_xtend ter pat =
                    Some found -> Some found
                  | None -> match_cat xs pat
   in
-  match (match_cat (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some found
+  revolver (ter, None, L2R, true) match_cat pat
 
 
 and t_Par_xtend ter pat =
@@ -176,9 +173,7 @@ and t_Par_xtend ter pat =
                    Some found -> Some found
                  | None -> match_par xs pat
   in
-  match (match_par (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some found
+  revolver (ter, None, L2R, true) match_par pat
 
 
 and t_Cat0_xtend_nil ter pat =
@@ -192,12 +187,10 @@ and t_Cat0_xtend_sol ter pat =
     match tl with
       [] -> None
     | (x::xs) -> (match (tourbillon x pat) with
-                    Some found -> Some found
+                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+  revolver (ter, None, L2R, true) match_sol pat
 
 
 and t_Cat0_xtend_infty ter pat =
@@ -238,9 +231,7 @@ and t_Cat0_xtend_infty ter pat =
                    Some found -> Some found
                  | None -> match_cat0 xs pat
   in
-  match (match_cat0 (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some found
+  revolver (ter, None, L2R, true) match_cat0 pat
 
 
 and t_Cat1_xtend_sol ter pat =
@@ -248,12 +239,10 @@ and t_Cat1_xtend_sol ter pat =
     match tl with
       [] -> None
     | (x::xs) -> (match (tourbillon x pat) with
-                    Some found -> Some found
+                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+  revolver (ter, None, L2R, true) match_sol pat
 
 
 and t_Cat1_xtend_infty ter pat =
@@ -295,9 +284,7 @@ and t_Cat1_xtend_infty ter pat =
                    Some found -> Some found
                  | None -> match_cat1 xs pat
   in
-  match (match_cat1 (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some found
+  revolver (ter, None, L2R, true) match_cat1 pat
 
 
 and t_Dup_xtend_sol ter pat =
@@ -305,12 +292,10 @@ and t_Dup_xtend_sol ter pat =
     match tl with
       [] -> None
     | (x::xs) -> (match (tourbillon x pat) with
-                    Some found -> Some found
+                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+  revolver (ter, None, L2R, true) match_sol pat
 
 
 and t_Dup_xtend_infty ter pat =
@@ -352,9 +337,7 @@ and t_Dup_xtend_infty ter pat =
                    Some found -> Some found
                  | None -> match_dup xs pat
   in
-  match (match_dup (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some found
+  revolver (ter, None, L2R, true) match_dup pat
 
 
 and t_Opt_xtend_nil ter pat =
@@ -368,12 +351,10 @@ and t_Opt_xtend_sol ter pat =
     match tl with
       [] -> None
     | (x::xs) -> (match (tourbillon x pat) with
-                    Some found -> Some found
+                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                   | None -> match_sol xs pat)
   in
-  match (match_sol (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+  revolver (ter, None, L2R, true) match_sol pat
 
 
 and t_Alt_xtend ter pat =
@@ -398,9 +379,7 @@ and t_Alt_xtend ter pat =
                    Some found -> Some found
                  | None -> match_alt xs pat
   in
-  match (match_alt (equiv_terms ter true) pat) with
-    None -> None
-  | Some found -> Some found;;
+  revolver (ter, None, L2R, true) match_alt pat;;
 
 
 
@@ -409,5 +388,3 @@ let typematch cli =
   match cli with
     None -> None
   | Some CLI (ter, pat) -> tourbillon ter pat;;
-
-
