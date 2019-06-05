@@ -30,7 +30,20 @@ let rec is_nil t =
                                                      None -> None
                                                    | Some nil_r -> Some nil_r) )
                                else None
-  | _ -> None
+  | _ -> None;;
+
+
+
+
+let rec revolver (ter_orig, ter_crnt, assoc_dir) pat =
+  let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) false)
+  in
+  match equivs with
+    (None, _, _) -> None
+  | (Some ter', es, dir) -> match (match_atomic es) with
+                              Some found -> Some {ter = ter_orig; equ = found; pat = pat; fin = FIN_GND; bindings = []}
+                            | None -> foo (ter_orig, (Some ter'), dir) pat;;
+
 
 
 
@@ -396,3 +409,5 @@ let typematch cli =
   match cli with
     None -> None
   | Some CLI (ter, pat) -> tourbillon ter pat;;
+
+

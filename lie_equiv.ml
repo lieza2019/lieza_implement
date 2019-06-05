@@ -2,275 +2,174 @@
 open Lie_type
 
 
+type assoc_dir =
+  | L2R
+  | R2L;;
 
 
-let rec equiv_assoc_cas t =
-  let is_deadend t =
-    match t with
-      Term_ent (op, id, sp, ad) -> true
-    | Term_una (op, t1) -> true
-    | Term_bin (WEDGE, tl, tr) -> false
-    | Term_bin (_, tl, tr) -> true
-  in
+let rec equiv_assoc_cas (t, dir) =
   match t with
-    Term_ent (op, id, sp, ad) -> [t]
-  | Term_una (op, t1) -> [t]
-                       
-  | Term_bin (WEDGE, Term_ent (op_l, id_l, sp_l, ad_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> [t]
-  | Term_bin (WEDGE, Term_ent (op_l, id_l, sp_l, ad_l), Term_una (op_r, t_r)) -> [t]
-  | Term_bin (WEDGE, Term_una (op_l, t_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> [t]
-  | Term_bin (WEDGE, Term_una (op_l, t_l), Term_una (op_r, t_r)) -> [t]
-
-  | Term_bin (WEDGE, Term_bin (WEDGE, ll, lr), r) ->
-     if ((is_deadend ll) && (is_deadend lr) && (is_deadend r)) then
-       [t; Term_bin (WEDGE, ll, Term_bin (WEDGE, lr, r))]
-     else
-       let l = Term_bin (WEDGE, ll, lr) in
-       equiv_assoc_cas_ind ((l, r)::(assoc_cas_family l r))
-  
-  | Term_bin (WEDGE, l, Term_bin (WEDGE, rl, rr)) ->
-     if ((is_deadend l) && (is_deadend rl) && (is_deadend rr)) then
-       [Term_bin (WEDGE, Term_bin (WEDGE, l, rl), rr); t]
-     else
-       let r = Term_bin (WEDGE, rl, rr) in
-       equiv_assoc_cas_ind ((l, r)::(assoc_cas_family l r))
-       
-  | Term_bin (WEDGE, l, r) -> equiv_assoc_cas_ind ((l, r)::(assoc_cas_family l r))
-                            
-  | Term_bin (_, l, r) -> [t]
-and assoc_cas_family l r =
-  let rec assoc_cas_family_r l r =
-    let rec assoc_cas_sft2_r l r =
+    Term_ent (op, id, sp, ad) -> (None, dir)
+  | Term_una (op, t1) -> (None, dir)
+  | Term_bin (WEDGE, Term_ent (op_l, id_l, sp_l, ad_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> (None, dir)
+  | Term_bin (WEDGE, Term_ent (op_l, id_l, sp_l, ad_l), Term_una (op_r, t_r)) -> (None, dir)
+  | Term_bin (WEDGE, Term_una (op_l, t_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> (None, dir)
+  | Term_bin (WEDGE, Term_una (op_l, t_l), Term_una (op_r, t_r)) -> (None, dir)
+  | Term_bin (WEDGE, l, r) -> assoc_cas_family l r dir
+  | Term_bin (_, l, r) -> (None, dir)
+and assoc_cas_family l r d =
+  let assoc_cas_R l r =
+    let rec sft2_r l r =
       match l with
-        Term_ent (op, id, sp, ad) -> (l, r)
-      | Term_una (op, l1) -> (l, r)
-      | Term_bin (WEDGE, ll, Term_ent (op_lr, id_lr, sp_lr, ad_lr)) -> (ll, Term_bin (WEDGE, Term_ent (op_lr, id_lr, sp_lr, ad_lr), r))
-      | Term_bin (WEDGE, ll, Term_una (op_lr, lr1)) -> (ll, Term_bin (WEDGE, Term_una (op_lr, lr1), r))
-      | Term_bin (WEDGE, ll, lr) ->
-         (match lr with
-            Term_bin (WEDGE, _, _) ->
-             (match (assoc_cas_sft2_r lr r) with (pl, pr) -> (Term_bin (WEDGE, ll, pl), pr))
-          | _ -> (ll, Term_bin (WEDGE, lr, r)))
-      | Term_bin (_, ll, lr) -> (l, r)
+        Term_ent (op, id, sp, ad) -> None
+      | Term_una (op, l1) -> None
+      | Term_bin (WEDGE, ll, Term_ent (op_lr, id_lr, sp_lr, ad_lr)) -> Some (ll, Term_bin (WEDGE, Term_ent (op_lr, id_lr, sp_lr, ad_lr), r))
+      | Term_bin (WEDGE, ll, Term_una (op_lr, lr1)) -> Some (ll, Term_bin (WEDGE, Term_una (op_lr, lr1), r))
+      | Term_bin (WEDGE, ll, lr) -> (match lr with
+                                       Term_bin (WEDGE, _, _) -> (match (sft2_r lr r) with
+                                                                    None -> None
+                                                                  | Some (pl, pr) -> Some (Term_bin (WEDGE, ll, pl), pr) )
+                                     | _ -> Some (ll, Term_bin (WEDGE, lr, r)) )
+      | Term_bin (_, ll, lr) -> None
     in
-    match (assoc_cas_sft2_r l r) with
-      (pl, pr) -> (pl, pr)::(match pl with
-                               Term_ent (op_l, id, sp, ad) -> []
-                             | Term_una (op_l, pl1) -> []
-                             | Term_bin (WEDGE, pl_l, pl_r) -> (assoc_cas_family_r pl pr)
-                             | Term_bin (_, pl_l, pl_r) -> [])
+    match (sft2_r l r) with
+      None -> None
+    | Some (l', r') -> Some (Term_bin (WEDGE, l', r'))
   in
-  let rec assoc_cas_family_l l r =
-    let rec assoc_cas_sft2_l l r =
+  let assoc_cas_L l r =
+    let rec sft2_l l r =
       match r with
-        Term_ent (op, id, sp, ad) -> (l, r)
-      | Term_una (op, r1) -> (l, r)
-      | Term_bin (WEDGE, Term_ent (op_rl, id_rl, sp_rl, ad_rl), rr) -> (Term_bin (WEDGE, l, Term_ent (op_rl, id_rl, sp_rl, ad_rl)), rr)
-      | Term_bin (WEDGE, Term_una (op_rl, rl1), rr) -> (Term_bin (WEDGE, l, Term_una (op_rl, rl1)), rr)
-      | Term_bin (WEDGE, rl, rr) ->
-         (match rl with
-            Term_bin (WEDGE, _, _) ->
-             (match (assoc_cas_sft2_l l rl) with (pl, pr) -> (pl, Term_bin (WEDGE, pr, rr)))
-          | _ -> (Term_bin (WEDGE, l, rl), rr))
-      | Term_bin (_, rl, rr) -> (l, r)
+        Term_ent (op, id, sp, ad) -> None
+      | Term_una (op, r1) -> None
+      | Term_bin (WEDGE, Term_ent (op_rl, id_rl, sp_rl, ad_rl), rr) -> Some (Term_bin (WEDGE, l, Term_ent (op_rl, id_rl, sp_rl, ad_rl)), rr)
+      | Term_bin (WEDGE, Term_una (op_rl, rl1), rr) -> Some (Term_bin (WEDGE, l, Term_una (op_rl, rl1)), rr)
+      | Term_bin (WEDGE, rl, rr) -> (match rl with
+                                       Term_bin (WEDGE, _, _) -> (match (sft2_l l rl) with
+                                                                    None -> None
+                                                                  | Some (pl, pr) -> Some (pl, Term_bin (WEDGE, pr, rr)) )
+                                     | _ -> Some (Term_bin (WEDGE, l, rl), rr) )
+      | Term_bin (_, rl, rr) -> None
     in
-    match (assoc_cas_sft2_l l r) with
-      (pl, pr) -> (pl, pr)::(match pr with
-                               Term_ent (op_r, id, sp, ad) -> []
-                             | Term_una (op_r, pr1) -> []
-                             | Term_bin (WEDGE, pr_l, pr_r) -> (assoc_cas_family_l pl pr)
-                             | Term_bin (_, pr_l, pr_r) -> [])
+    match (sft2_l l r) with
+      None -> None
+    | Some (l', r') -> Some (Term_bin (WEDGE, l', r'))
   in
-  match l with
-    Term_ent (op_l, id, sp, ad) -> (match r with
-                                      Term_ent (op_r, id, sp, ad) -> []
-                                    | Term_una (op_r, r1) -> []
-                                    | Term_bin (WEDGE, rl, rr) -> (assoc_cas_family_l l r)
-                                    | Term_bin (_, rl, rr) -> [])
-  | Term_una (op_l, l1) -> (match r with
-                              Term_ent (op_r, id, sp, ad) -> []
-                            | Term_una (op_r, r1) -> []
-                            | Term_bin (WEDGE, rl, rr) -> (assoc_cas_family_l l r)
-                            | Term_bin (_, rl, rr) -> [])
-  | Term_bin (WEDGE, ll, lr) -> (match r with
-                                   Term_ent (op_r, id, sp, ad) -> (assoc_cas_family_r l r)
-                                 | Term_una (op_r, r1) -> (assoc_cas_family_r l r)
-                                 | Term_bin (WEDGE, rl, rr) -> ((assoc_cas_family_r l r) @ (assoc_cas_family_l l r))
-                                 | Term_bin (_, rl, rr) -> (assoc_cas_family_r l r))
-  | Term_bin (_, ll, lr) -> (match r with
-                              Term_ent (op_r, id, sp, ad) -> []
-                            | Term_una (op_r, r1) -> []
-                            | Term_bin (WEDGE, rl, rr) -> (assoc_cas_family_l l r)
-                            | Term_bin (_, rl, rr) -> [])
-and equiv_assoc_cas_ind ts =
-  match ts with
-    [] -> []
-  | (pl, pr)::ps -> (Term_bin (WEDGE, pl, pr))::(equiv_assoc_cas_ind ps);;
+  match d with
+    L2R -> (match l with
+              Term_bin (WEDGE, ll, lr) -> ((assoc_cas_R l r), L2R)
+            | _ -> (None, L2R) )
+  | R2L -> (match r with
+              Term_bin (WEDGE, rl, rr) -> ((assoc_cas_L l r), R2L)
+            | _ -> (None, R2L) );;
 
 
 
 
-let rec equiv_assoc_par t =
-  let is_deadend t =
-    match t with
-      Term_ent (op, id, sp, ad) -> true
-    | Term_una (op, t1) -> true
-    | Term_bin (VEE, tl, trm) -> false
-    | Term_bin (_, tl, tr) -> true
-  in
+let rec equiv_assoc_par (t, dir) =
   match t with
-    Term_ent (op, id, sp, ad) -> [t]
-  | Term_una (op, t1) -> [t]
-                       
-  | Term_bin (VEE, Term_ent (op_l, id_l, sp_l, ad_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> [t]
-  | Term_bin (VEE, Term_ent (op_l, id_l, sp_l, ad_l), Term_una (op_r, t_r)) -> [t]
-  | Term_bin (VEE, Term_una (op_l, t_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> [t]
-  | Term_bin (VEE, Term_una (op_l, t_l), Term_una (op_r, t_r)) -> [t]
-
-  | Term_bin (VEE, Term_bin (VEE, ll, lr), r) ->
-     if ((is_deadend ll) && (is_deadend lr) && (is_deadend r)) then
-       [t; Term_bin (VEE, ll, Term_bin (VEE, lr, r))]
-     else
-       let l = Term_bin (VEE, ll, lr) in
-       equiv_assoc_par_ind ((l, r)::(assoc_par_family l r))
-       
-  | Term_bin (VEE, l, Term_bin (VEE, rl, rr)) ->
-     if ((is_deadend l) && (is_deadend rl) && (is_deadend rr)) then
-       [Term_bin (VEE, Term_bin (VEE, l, rl), rr); t]
-     else
-       let r = Term_bin (VEE, rl, rr) in
-       equiv_assoc_par_ind ((l, r)::(assoc_par_family l r))
-       
-  | Term_bin (VEE, l, r) -> equiv_assoc_par_ind ((l, r)::(assoc_par_family l r))
-                            
-  | Term_bin (_, l, r) -> [t]
-and assoc_par_family l r =
-  let rec assoc_par_family_r l r =
-    let rec assoc_par_sft2_r l r =
+    Term_ent (op, id, sp, ad) -> (None, dir)
+  | Term_una (op, t1) -> (None, dir)
+  | Term_bin (VEE, Term_ent (op_l, id_l, sp_l, ad_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> (None, dir)
+  | Term_bin (VEE, Term_ent (op_l, id_l, sp_l, ad_l), Term_una (op_r, t_r)) -> (None, dir)
+  | Term_bin (VEE, Term_una (op_l, t_l), Term_ent (op_r, id_r, sp_r, ad_r)) -> (None, dir)
+  | Term_bin (VEE, Term_una (op_l, t_l), Term_una (op_r, t_r)) -> (None, dir)
+  | Term_bin (VEE, l, r) -> assoc_par_family l r dir
+  | Term_bin (_, l, r) -> (None, dir)
+and assoc_par_family l r d =
+  let assoc_par_R l r =
+    let rec sft2_r l r =
       match l with
-        Term_ent (op, id, sp, ad) -> (l, r)
-      | Term_una (op, l1) -> (l, r)
-      | Term_bin (VEE, ll, Term_ent (op_lr, id_lr, sp_lr, ad_lr)) -> (ll, Term_bin (VEE, Term_ent (op_lr, id_lr, sp_lr, ad_lr), r))
-      | Term_bin (VEE, ll, Term_una (op_lr, lr1)) -> (ll, Term_bin (VEE, Term_una (op_lr, lr1), r))
-      | Term_bin (VEE, ll, lr) ->
-         (match lr with
-            Term_bin (VEE, _, _) ->
-             (match (assoc_par_sft2_r lr r) with (pl, pr) -> (Term_bin (VEE, ll, pl), pr))
-          | _ -> (ll, Term_bin (VEE, lr, r)))
-      | Term_bin (_, ll, lr) -> (l, r)
+        Term_ent (op, id, sp, ad) -> None
+      | Term_una (op, l1) -> None
+      | Term_bin (VEE, ll, Term_ent (op_lr, id_lr, sp_lr, ad_lr)) -> Some (ll, Term_bin (VEE, Term_ent (op_lr, id_lr, sp_lr, ad_lr), r))
+      | Term_bin (VEE, ll, Term_una (op_lr, lr1)) -> Some (ll, Term_bin (VEE, Term_una (op_lr, lr1), r))
+      | Term_bin (VEE, ll, lr) -> (match lr with
+                                       Term_bin (VEE, _, _) -> (match (sft2_r lr r) with
+                                                                    None -> None
+                                                                  | Some (pl, pr) -> Some (Term_bin (VEE, ll, pl), pr) )
+                                     | _ -> Some (ll, Term_bin (VEE, lr, r)) )
+      | Term_bin (_, ll, lr) -> None
     in
-    match (assoc_par_sft2_r l r) with
-      (pl, pr) -> (pl, pr)::(match pl with
-                               Term_ent (op_l, id, sp, ad) -> []
-                             | Term_una (op_l, pl1) -> []
-                             | Term_bin (VEE, pl_l, pl_r) -> (assoc_par_family_r pl pr)
-                             | Term_bin (_, pl_l, pl_r) -> [])
+    match (sft2_r l r) with
+      None -> None
+    | Some (l', r') -> Some (Term_bin (VEE, l', r'))
   in
-  let rec assoc_par_family_l l r =
-    let rec assoc_par_sft2_l l r =
+  let assoc_par_L l r =
+    let rec sft2_l l r =
       match r with
-        Term_ent (op, id, sp, ad) -> (l, r)
-      | Term_una (op, r1) -> (l, r)
-      | Term_bin (VEE, Term_ent (op_rl, id_rl, sp_rl, ad_rl), rr) -> (Term_bin (VEE, l, Term_ent (op_rl, id_rl, sp_rl, ad_rl)), rr)
-      | Term_bin (VEE, Term_una (op_rl, rl1), rr) -> (Term_bin (VEE, l, Term_una (op_rl, rl1)), rr)
-      | Term_bin (VEE, rl, rr) ->
-         (match rl with
-            Term_bin (VEE, _, _) ->
-             (match (assoc_par_sft2_l l rl) with (pl, pr) -> (pl, Term_bin (VEE, pr, rr)))
-          | _ -> (Term_bin (VEE, l, rl), rr))
-      | Term_bin (_, rl, rr) -> (l, r)
+        Term_ent (op, id, sp, ad) -> None
+      | Term_una (op, r1) -> None
+      | Term_bin (VEE, Term_ent (op_rl, id_rl, sp_rl, ad_rl), rr) -> Some (Term_bin (VEE, l, Term_ent (op_rl, id_rl, sp_rl, ad_rl)), rr)
+      | Term_bin (VEE, Term_una (op_rl, rl1), rr) -> Some (Term_bin (VEE, l, Term_una (op_rl, rl1)), rr)
+      | Term_bin (VEE, rl, rr) -> (match rl with
+                                       Term_bin (VEE, _, _) -> (match (sft2_l l rl) with
+                                                                    None -> None
+                                                                  | Some (pl, pr) -> Some (pl, Term_bin (VEE, pr, rr)) )
+                                     | _ -> Some (Term_bin (VEE, l, rl), rr) )
+      | Term_bin (_, rl, rr) -> None
     in
-    match (assoc_par_sft2_l l r) with
-      (pl, pr) -> (pl, pr)::(match pr with
-                               Term_ent (op_r, id, sp, ad) -> []
-                             | Term_una (op_r, pr1) -> []
-                             | Term_bin (VEE, pr_l, pr_r) -> (assoc_par_family_l pl pr)
-                             | Term_bin (_, pr_l, pr_r) -> [])
+    match (sft2_l l r) with
+      None -> None
+    | Some (l', r') -> Some (Term_bin (VEE, l', r'))
   in
-  match l with
-    Term_ent (op_l, id, sp, ad) -> (match r with
-                                      Term_ent (op_r, id, sp, ad) -> []
-                                    | Term_una (op_r, r1) -> []
-                                    | Term_bin (VEE, rl, rr) -> (assoc_par_family_l l r)
-                                    | Term_bin (_, rl, rr) -> [])
-  | Term_una (op_l, l1) -> (match r with
-                              Term_ent (op_r, id, sp, ad) -> []
-                            | Term_una (op_r, r1) -> []
-                            | Term_bin (VEE, rl, rr) -> (assoc_par_family_l l r)
-                            | Term_bin (_, rl, rr) -> [])
-  | Term_bin (VEE, ll, lr) -> (match r with
-                                   Term_ent (op_r, id, sp, ad) -> (assoc_par_family_r l r)
-                                 | Term_una (op_r, r1) -> (assoc_par_family_r l r)
-                                 | Term_bin (VEE, rl, rr) -> ((assoc_par_family_r l r) @ (assoc_par_family_l l r))
-                                 | Term_bin (_, rl, rr) -> (assoc_par_family_r l r))
-  | Term_bin (_, ll, lr) -> (match r with
-                              Term_ent (op_r, id, sp, ad) -> []
-                            | Term_una (op_r, r1) -> []
-                            | Term_bin (VEE, rl, rr) -> (assoc_par_family_l l r)
-                            | Term_bin (_, rl, rr) -> [])
-and equiv_assoc_par_ind ts =
-  match ts with
-    [] -> []
-  | (pl, pr)::ps -> (Term_bin (VEE, pl, pr))::(equiv_assoc_par_ind ps);;
+  match d with
+    L2R -> (match l with
+              Term_bin (VEE, ll, lr) -> ((assoc_par_R l r), L2R)
+            | _ -> (None, L2R) )
+  | R2L -> (match r with
+              Term_bin (VEE, rl, rr) -> ((assoc_par_L l r), R2L)
+            | _ -> (None, R2L) );;
 
 
 
 
-let equiv_assocs t =
-  match t with
-    Term_ent (op, id, sp, ad) -> [t]
-  | Term_una (op, t1) -> [t]
-  | Term_bin (WEDGE, l, r) -> equiv_assoc_cas t
-  | Term_bin (VEE, l, r) -> equiv_assoc_par t
-  | Term_bin (_, l, r) -> [t];;
+(* gathering by "Associativity-Cas-L/R" and "Associativity-Par-L/R" *)
+let equiv_assocs (t_orig, t_resume, assoc_dir) =
+  match t_resume with
+    Term_ent (op, id, sp, ad) -> (None, assoc_dir)
+  | Term_una (op, t1) -> (None, assoc_dir)
+  | Term_bin (WEDGE, l, r) -> let t_res' = (equiv_assoc_cas (t_resume, assoc_dir)) in
+                              (match t_res' with
+                                 (None, R2L) -> (None, R2L)
+                               | (None, L2R) -> equiv_assoc_cas (t_orig, R2L)
+                               | (Some e, _) -> t_res' )
+  | Term_bin (VEE, l, r) -> let t_res' = (equiv_assoc_par (t_resume, assoc_dir)) in
+                              (match t_res' with
+                                 (None, R2L) -> (None, R2L)
+                               | (None, L2R) -> equiv_assoc_par (t_orig, R2L)
+                               | (Some e, _) -> t_res' )
+  | Term_bin (_, l, r) -> (None, assoc_dir);;
 
 
 
 
-let rec equiv_terms t ena_bumpup =
-  let equivs = (gath_equivs t) in
-  let equ_ph3 = (gath_equ_ph3 equivs) in
-  let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equivs) else equivs
-  in
-  set_union equivs (set_union equ_ph3 equ_ph4)
+let rec equiv_terms (t_orig, t_resume, assoc_dir) ena_bumpup =
+  match t_resume with
+    None -> (Some t_orig, [t_orig], L2R)
+  | Some t_res -> let equ_assoc = (equiv_assocs (t_orig, t_res, assoc_dir))
+                  in
+                  match equ_assoc with
+                    (None, dir) -> (None, [], dir)
+                  | (Some e, dir) -> let equ_ph2 = (gath_equivs e) in
+                                     let equ_ph3 = (gath_equ_ph3 equ_ph2) in
+                                     let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equ_ph2) else equ_ph2
+                                     in
+                                     (Some e, (set_union equ_ph2 (set_union equ_ph3 equ_ph4)), dir)
 
 
-and gath_equivs t =  
-  let equ_ph1 = equiv_assocs t  (* gathering by "Associativity-Cas-L/R" and "Associativity-Par-L/R" *)
-  in
+and gath_equivs t =
   (* gathering by "Identity", "Transparency-Cas" and "Transparency-Par" *)
-  let rec gath_equ_ph2 equivs =   
-    match equivs with
-      [] -> []
-    | (e::es) -> (match e with
-                  | Term_ent (op, id, sp, ad) -> [e]
-                  | Term_una (op, t1) -> [e]
-                  | Term_bin (WEDGE, tl, tr) -> [e]
-                  | Term_bin (VEE, tl, tr) -> [e]
-                  | Term_bin (_, _, _) -> [e]
-                 ) @ (gath_equ_ph2 es)
+  let rec gath_equ_ph2 equiv =
+    match equiv with
+    | Term_ent (op, id, sp, ad) -> [equiv]
+    | Term_una (op, t1) -> [equiv]
+    | Term_bin (WEDGE, tl, tr) -> [equiv]
+    | Term_bin (VEE, tl, tr) -> [equiv]
+    | Term_bin (_, _, _) -> [equiv]
   in
-  gath_equ_ph2 equ_ph1
-and merge_wedge tr_l tr_r =
-  let rec attach l tr_r =
-    match tr_r with
-      [] -> []
-    | r::rs -> (Term_bin (WEDGE, l, r))::(attach l rs)
-  in
-  match tr_l with
-    [] -> []
-  | l::ls -> (attach l tr_r) @ (merge_wedge ls tr_r)
-and merge_vee tr_l tr_r =
-  let rec attach l tr_r =
-    match tr_r with
-      [] -> []
-    | r::rs -> (Term_bin (VEE, l, r))::(attach l rs)
-  in
-  match tr_l with
-    [] -> []
-  | l::ls -> (attach l tr_r) @ (merge_vee ls tr_r)
+  gath_equ_ph2 t
 
-    
+
 (* gathering by "RevealH-Cas/Par" and "RevealT-Cas/Par" *)
 and gath_equ_ph3 equivs =
   match equivs with
@@ -278,10 +177,9 @@ and gath_equ_ph3 equivs =
   | (e::es) -> (match e with
                   Term_ent (op, id, sp, ad) -> e
                 | Term_una (op, t1) -> e
-                | Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), tr) -> tr
-                | Term_bin (WEDGE, tl, Term_una ( STAR, Term_ent (NIL, "", "", ad) )) -> tl
-                | Term_bin (_, _, _) -> e
-               ) :: (gath_equ_ph3 es)
+                | Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_r) -> t_r
+                | Term_bin (WEDGE, t_l, Term_una ( STAR, Term_ent (NIL, "", "", ad) )) -> t_l
+                | Term_bin (_, _, _) -> e ) :: (gath_equ_ph3 es)
 
 
 (* gathering by "PhonyH-Cas/Par" and "PhonyT-Cas/Par" *)
@@ -312,3 +210,37 @@ and gath_equ_ph4 equivs =
                            | _ -> [Term_bin (VEE, e, Term_una( STAR, Term_ent (NIL, "", "", (max_addr_term e) + 1) ))])
      in
      set_union bumped_ones (gath_equ_ph4 es);;
+
+
+
+
+let rec  merge_wedge tr_l tr_r =
+  let rec attach l tr_r =
+    match tr_r with
+      [] -> []
+    | r::rs -> (Term_bin (WEDGE, l, r))::(attach l rs)
+  in
+  match tr_l with
+    [] -> []
+  | l::ls -> (attach l tr_r) @ (merge_wedge ls tr_r);;
+
+
+let rec merge_vee tr_l tr_r =
+  let rec attach l tr_r =
+    match tr_r with
+      [] -> []
+    | r::rs -> (Term_bin (VEE, l, r))::(attach l rs)
+  in
+  match tr_l with
+    [] -> []
+  | l::ls -> (attach l tr_r) @ (merge_vee ls tr_r);;
+
+
+
+
+let rec bar (ter_orig, ter_crnt, assoc_dir) =
+  let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) false)
+  in
+  match equivs with
+    (None, _, _) -> []
+  | (Some ter', es, dir) -> ter' :: (bar (ter_orig, (Some ter'), dir));;
