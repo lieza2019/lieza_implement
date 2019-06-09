@@ -192,3 +192,4 @@ let rec consult_bindings pat judgement =
                              | _ -> raise (Illformed_bindings_detected (t, p, "consult_bindings")) )
                          | _ -> raise (Illegal_pat_detected (t, p, "consult_bindings"))
                         );;
+

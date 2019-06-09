@@ -234,13 +234,3 @@ let rec merge_vee tr_l tr_r =
   match tr_l with
     [] -> []
   | l::ls -> (attach l tr_r) @ (merge_vee ls tr_r);;
-
-
-
-
-let rec bar (ter_orig, ter_crnt, assoc_dir) =
-  let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) false)
-  in
-  match equivs with
-    (None, _, _) -> []
-  | (Some ter', es, dir) -> ter' :: (bar (ter_orig, (Some ter'), dir));;

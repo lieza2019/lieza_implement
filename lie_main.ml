@@ -65,11 +65,90 @@ let compile src =
   | None -> None;;
 
 
-let compile_ter src= 
-  match (compile src) with
+let cli_ter cli =
+  match cli with
     Some CLI (ter, pat) -> ter;;
 
 
-let compile_pat src =
-  match (compile src) with
+let cli_pat cli =
+  match cli with
     Some CLI (ter, pat) -> pat;;
+
+
+let compile_ter src_str =
+  cli_ter (compile (src_str ^ ": R*"));;
+
+
+let compile_pat pat_str =
+  cli_pat (compile ("{} :" ^ pat_str));;
+
+
+
+
+let rec discomp_ter ter =
+  match ter with
+    Term_ent (op, id, sp, ad) -> id ^ (if (sp <> "") then  ("_" ^ sp) else "")
+  | Term_una (op, t1) -> (match op with
+                            STAR -> "{" ^ (discomp_ter t1) ^ "}"
+                          | CROSS -> "[" ^ (discomp_ter t1) ^ "]"
+                          | STROK -> "<" ^ (discomp_ter t1) ^ ">"
+                          | _ -> "(UNKNOWN-EXPR with " ^ (discomp_ter t1) ^ ")" )
+  | Term_bin (WEDGE, tl, tr) -> (match tl with
+                                   Term_ent (ENT, id1, sp1, ad1) ->
+                                    (match tr with
+                                       Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " & (" ^ (discomp_ter tr) ^ "))"
+                                     | _ -> "(" ^ (discomp_ter tl) ^ " & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                 | Term_una (_, tl1) ->
+                                    (match tr with
+                                       Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " & (" ^ (discomp_ter tr) ^ "))"
+                                     | _ -> "(" ^ (discomp_ter tl) ^ " & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                 | Term_bin (_, tll, tlr) ->
+                                    (match tr with
+                                       Term_ent (ENT, id2, sp2, ad2) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (_, t21) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_bin (_, trl, trr) -> "((" ^ (discomp_ter tl) ^ ") & (" ^ (discomp_ter tr) ^ "))"
+                                     | _ ->  "((" ^ (discomp_ter tl) ^ ") & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                 | _ ->
+                                    (match tr with
+                                       Term_ent (ENT, id2, sp2, ad2) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (op2, t21) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_bin (_, trl, trr) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & (" ^ (discomp_ter tr) ^ "))"
+                                     | _ ->  "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                )
+  | Term_bin (VEE, tl, tr) -> (match tl with
+                                 Term_ent (ENT, id1, sp1, ad1) ->
+                                  (match tr with
+                                     Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " | (" ^ (discomp_ter tr) ^ "))"
+                                   | _ -> "(" ^ (discomp_ter tl) ^ " | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                               | Term_una (_, tl1) ->
+                                  (match tr with
+                                     Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " | (" ^ (discomp_ter tr) ^ "))"
+                                   | _ -> "(" ^ (discomp_ter tl) ^ " | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                               | Term_bin (_, tll, tlr) ->
+                                  (match tr with
+                                     Term_ent (ENT, id2, sp2, ad2) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (_, t21) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_bin (_, trl, trr) -> "((" ^ (discomp_ter tl) ^ ") | (" ^ (discomp_ter tr) ^ "))"
+                                   | _ ->  "((" ^ (discomp_ter tl) ^ ") | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                               | _ ->
+                                  (match tr with
+                                     Term_ent (ENT, id2, sp2, ad2) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (op2, t21) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_bin (_, trl, trr) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | (" ^ (discomp_ter tr) ^ "))"
+                                   | _ ->  "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                              )
+  | _ -> "(UNKNOWN-EXPR with UNKNOWN-TERM)";;
+
+
+let pretty_t ter =
+  match ter with
+    None -> None
+  | Some ter' -> Some (discomp_ter ter');;
