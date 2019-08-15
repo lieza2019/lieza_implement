@@ -191,9 +191,14 @@ and t_Par_xtend ter pat =
 and t_Cat0_xtend_nil ter pat =
   match (is_nil ter) with
     None -> None
-  | Some v -> Some {ter = ter; equ = v; pat = pat; fin = FIN_NIL; bindings = []}
+  | Some v -> let v' = (match v with
+                          Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> v
+                        | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> Term_una ( STAR, Term_ent (NIL, id, sp, ad) )
+                        | _ -> raise (Illformed_equterm_detected (v, pat, "t_Cat0_xtend_nil")) )
+              in
+              Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
 
-            
+
 and t_Cat0_xtend_sol ter pat =
   let rec match_sol tl pat =
     match tl with
@@ -355,7 +360,12 @@ and t_Dup_xtend_infty ter pat =
 and t_Opt_xtend_nil ter pat =
   match (is_nil ter) with
     None -> None
-  | Some v -> Some {ter = ter; equ = v; pat = pat; fin = FIN_NIL; bindings = []}
+  | Some v -> let v' = (match v with
+                        | Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> Term_una ( OPT, Term_ent (NIL, id, sp, ad) )
+                        | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> v
+                        | _ -> raise (Illformed_equterm_detected (v, pat, "t_Opt_xtend_nil")) )
+              in
+              Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
 
 
 and t_Opt_xtend_sol ter pat =
