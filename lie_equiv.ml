@@ -123,7 +123,7 @@ and assoc_par_family l r d =
 
 
 
-(* gathering by "Associativity-Cas-L/R" and "Associativity-Par-L/R" *)
+(* gathering by "Associativity-Cas" and "Associativity-Par" *)
 let equiv_assocs (t_orig, t_resume, assoc_dir) =
   match t_resume with
     Term_ent (op, id, sp, ad) -> (None, assoc_dir)
@@ -144,33 +144,73 @@ let equiv_assocs (t_orig, t_resume, assoc_dir) =
 
 
 let rec equiv_terms (t_orig, t_resume, assoc_dir) ena_bumpup =
+  let derive t =
+    let equ_ph2 = (gath_equivs t) in
+    let equ_ph3 = (gath_equ_ph3 equ_ph2) in
+    let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equ_ph2) else equ_ph2
+    in
+    (set_union equ_ph2 (set_union equ_ph3 equ_ph4))
+  in    
   match t_resume with
-    None -> (Some t_orig, [t_orig], L2R)
+    None -> (Some t_orig, (derive t_orig), L2R)
   | Some t_res -> let equ_assoc = (equiv_assocs (t_orig, t_res, assoc_dir))
                   in
                   match equ_assoc with
                     (None, dir) -> (None, [], dir)
-                  | (Some e, dir) -> let equ_ph2 = (gath_equivs e) in
-                                     let equ_ph3 = (gath_equ_ph3 equ_ph2) in
-                                     let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equ_ph2) else equ_ph2
-                                     in
-                                     (Some e, (set_union equ_ph2 (set_union equ_ph3 equ_ph4)), dir)
+                  | (Some e, dir) -> (Some e, (derive t_orig), dir)
 
 
 and gath_equivs t =
-  (* gathering by "Identity", "Transparency-Cas" and "Transparency-Par" *)
+  (* gathering equivalents by "Identity" and
+     "Associativity-Cat0_1", "Associativity-Cat1_1", "Associativity-Dup_1",
+     "AssociativityH-Cat0_infty", "AssociativityH-Cat1_infty", "AssociativityH-Dup_infty",
+     "Optional", "Alt-L", "Alt-R". *)
   let rec gath_equ_ph2 equiv =
+    let strip_grp t =
+      match t with
+        Term_una (STAR, t1) -> (match t1 with
+                                  Term_ent (NIL, "", "", ad) -> []
+                                | _ -> [t1])
+      | Term_una (CROSS, t1) -> [t1]
+      | Term_una (STROK, t1) -> [t1]
+      | Term_una (OPT, t1) -> (match t1 with
+                                 Term_ent (NIL, "", "", ad) -> []
+                               | _ -> [t1])
+      | Term_una (LEFT, t1) -> [t1]
+      | Term_una (RIGHT, t1) -> [t1]
+      | _ -> []
+    in
+    let split_grp t =
+      match t with
+      | Term_bin (STAR, tl, tr) -> let tr' = (match tr with
+                                                Term_ent (op, id, sp, ad) -> Term_una (STAR, tr)
+                                              | _ -> tr)
+                                   in
+                                   [Term_bin (WEDGE, tl, tr')]
+      | Term_bin (CROSS, tl, tr) -> let tr' = (match tr with
+                                                 Term_ent (op, id, sp, ad) -> Term_una (CROSS, tr)
+                                               | _ -> tr)
+                                    in
+                                    [Term_bin (WEDGE, tl, tr')]
+      | Term_bin (STROK, tl, tr) -> let tr' = (match tr with
+                                                 Term_ent (op, id, sp, ad) -> Term_una (STROK, tr)
+                                               | _ -> tr)
+                                    in
+                                    [Term_bin (VEE, tl, tr')]                                   
+      | _ -> []
+    in
     match equiv with
     | Term_ent (op, id, sp, ad) -> [equiv]
-    | Term_una (op, t1) -> [equiv]
+    | Term_una (op, t1) ->  [equiv] @ (strip_grp equiv)
     | Term_bin (WEDGE, tl, tr) -> [equiv]
     | Term_bin (VEE, tl, tr) -> [equiv]
-    | Term_bin (_, _, _) -> [equiv]
+    | Term_bin (_, _, _) -> [equiv] @ (split_grp equiv)
   in
   gath_equ_ph2 t
 
 
-(* gathering by "RevealH-Cas/Par" and "RevealT-Cas/Par" *)
+(* gathering by "RevealH-Cas_{}", "RevealT-Cas_{}", "RevealH-Par_{}", "RevealT-Par_{}" and
+   "RevealH-Cas_o", "RevealT-Cas_o", "RevealH-Par_o", "RevealT-Par_o". *)
 and gath_equ_ph3 equivs =
   match equivs with
     [] -> []
@@ -179,10 +219,17 @@ and gath_equ_ph3 equivs =
                 | Term_una (op, t1) -> e
                 | Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_r) -> t_r
                 | Term_bin (WEDGE, t_l, Term_una ( STAR, Term_ent (NIL, "", "", ad) )) -> t_l
+                | Term_bin (VEE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_r) -> t_r
+                | Term_bin (VEE, t_l, Term_una ( STAR, Term_ent (NIL, "", "", ad) )) -> t_l
+                | Term_bin (WEDGE, Term_una ( OPT, Term_ent (NIL, "", "", ad) ), t_r) -> t_r
+                | Term_bin (WEDGE, t_l, Term_una ( OPT, Term_ent (NIL, "", "", ad) )) -> t_l
+                | Term_bin (VEE, Term_una ( OPT, Term_ent (NIL, "", "", ad) ), t_r) -> t_r
+                | Term_bin (VEE, t_l, Term_una ( OPT, Term_ent (NIL, "", "", ad) )) -> t_l
                 | Term_bin (_, _, _) -> e ) :: (gath_equ_ph3 es)
 
 
-(* gathering by "PhonyH-Cas/Par" and "PhonyT-Cas/Par" *)
+(* gathering by "PhonyH-Cas_{}", "PhonyT-Cas_{}", "PhonyH-Par_{}", "PhonyT-Par_{}" and
+   "PhonyH-Cas_o", "PhonyT-Cas_o", "PhonyH-Par_o", "PhonyT-Par_o".  *)
 and gath_equ_ph4 equivs =
   let rec max_addr_term ter =
     match ter with
@@ -206,8 +253,20 @@ and gath_equ_ph4 equivs =
                              Term_bin (VEE, Term_una( STAR, Term_ent (NIL, "", "", ad) ), _) -> e
                            | _ -> Term_bin (VEE, Term_una( STAR, Term_ent (NIL, "", "", (max_addr_term e) + 1) ), e))
                        :: (match e with
-                             Term_bin (VEE, _, Term_una( STAR, Term_ent (NIL, "", "", ad) )) -> [e]
-                           | _ -> [Term_bin (VEE, e, Term_una( STAR, Term_ent (NIL, "", "", (max_addr_term e) + 1) ))])
+                             Term_bin (VEE, _, Term_una( STAR, Term_ent (NIL, "", "", ad) )) -> e
+                           | _ -> Term_bin (VEE, e, Term_una( STAR, Term_ent (NIL, "", "", (max_addr_term e) + 1)) ))
+                       :: (match e with
+                             Term_bin (WEDGE, Term_una( OPT, Term_ent (NIL, "", "", ad) ), _) -> e
+                           | _ -> Term_bin (WEDGE, Term_una( OPT, Term_ent (NIL, "", "", (max_addr_term e) + 1) ), e))
+                       :: (match e with
+                             Term_bin (WEDGE, _, Term_una( OPT, Term_ent (NIL, "", "", ad) )) -> e
+                           | _ -> Term_bin (WEDGE, e, Term_una( OPT, Term_ent (NIL, "", "", (max_addr_term e) + 1)) ))
+                       :: (match e with
+                             Term_bin (VEE, Term_una( OPT, Term_ent (NIL, "", "", ad) ), _) -> e
+                           | _ -> Term_bin (VEE, Term_una( OPT, Term_ent (NIL, "", "", (max_addr_term e) + 1) ), e))
+                       :: (match e with
+                             Term_bin (VEE, _, Term_una( OPT, Term_ent (NIL, "", "", ad) )) -> [e]
+                           | _ -> [Term_bin (VEE, e, Term_una( OPT, Term_ent (NIL, "", "", (max_addr_term e) + 1) ))])
      in
      set_union bumped_ones (gath_equ_ph4 es);;
 

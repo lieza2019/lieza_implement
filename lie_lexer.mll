@@ -10,7 +10,9 @@ let alnum = alpha | digit
 
 rule token = parse
   (* operators *)
-  '&' { WEDGE }
+  | "<-" { LEFT }
+  | "->" { RIGHT }
+  | '&' { WEDGE }
   | '|' { VEE }
   | '*' { STAR }
   | '+' { CROSS }

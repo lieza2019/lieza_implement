@@ -14,12 +14,15 @@ open Lie_type
 
 %token STAR CROSS STROK OPT
 %token ALT
+%token LEFT
+%token RIGHT
 %token WEDGE VEE
 %token EOI
 
 %right WEDGE VEE
 %right ALT
 %nonassoc STAR CROSS STROK OPT
+%nonassoc LEFT RIGHT
 
 %start main
 %type <Lie_type.cli> main
@@ -35,12 +38,16 @@ expr_term:
 | IDENT1 SPECIFIER IDENT1    { Term_ent (ENT, $1, $3, -1 ) }
 | LPAR expr_term RPAR    { $2 }
 | LBRA RBRA    { Term_una ( STAR, Term_ent (NIL, "", "", -1) ) }
+| STAR    { Term_una ( OPT, Term_ent (NIL, "", "", -1) ) }
 | LBRA expr_term RBRA    { Term_una (STAR, $2) }
 | LBRA expr_term COMMA expr_star_lst RBRA    { Term_bin (STAR, $2, $4) }
 | LSQB expr_term RSQB    { Term_una (CROSS, $2) }
 | LSQB expr_term COMMA expr_cross_lst RSQB    { Term_bin (CROSS, $2, $4) }
 | LBIL expr_term RBIL    { Term_una (STROK, $2) }
 | LBIL expr_term COMMA expr_strok_lst RBIL    { Term_bin (STROK, $2, $4) }
+| expr_term OPT    { Term_una (OPT, $1) }
+| expr_term LEFT    { Term_una (LEFT, $1) }
+| expr_term RIGHT    { Term_una (RIGHT, $1) }
 | expr_term WEDGE expr_term    { Term_bin (WEDGE, $1, $3) }
 | expr_term VEE expr_term    { Term_bin (VEE, $1, $3) }
 ;

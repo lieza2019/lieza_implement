@@ -125,7 +125,7 @@ and t_Cas_xtend ter pat =
                                                                 (match bindings' with
                                                                    [] -> raise (Illformed_bindings_detected (t, pat, "t_Cas_xtend"))
                                                                  | b -> let e = Term_bin (WEDGE, b_1st.ter, b_2nd.ter) in
-                                                                        Some {ter = t; equ = e; pat = pat; fin = FIN_WEDGE; bindings = b} )
+                                                                        Some {ter = ter; equ = e; pat = pat; fin = FIN_WEDGE; bindings = b} )
                                                             )
                                            )
                                         | _ -> None
@@ -160,7 +160,7 @@ and t_Par_xtend ter pat =
                                                               (match bindings' with
                                                                  [] -> raise (Illformed_bindings_detected (t, pat, "t_Par_xtend"))
                                                                | b -> let e = Term_bin (VEE, b_1st.ter, b_2nd.ter) in
-                                                                      Some {ter = t; equ = e; pat = pat; fin = FIN_VEE; bindings = b} )
+                                                                      Some {ter = ter; equ = e; pat = pat; fin = FIN_VEE; bindings = b} )
                                                           )
                                          )
                                       | _ -> None
@@ -206,7 +206,7 @@ and t_Cat0_xtend_infty ter pat =
   let rec cmp_cat0 t pat =
     match (disbumping t) with
       Some (t_h, t_t) ->
-       let r_h = (tourbillon t_h pat)       
+       let r_h = (tourbillon t_h pat)
        in
        (match r_h with
         | None -> None
@@ -220,7 +220,7 @@ and t_Cat0_xtend_infty ter pat =
                                         [] -> raise (Illformed_bindings_detected (t, pat, "t_Cat0_xtend_infty"))
                                       | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
                                              in
-                                             Some {ter = t; equ = e; pat = Pat_una (STAR, pat, -1); fin = FIN_INFTY; bindings = b} )
+                                             Some {ter = ter; equ = e; pat = Pat_una (STAR, pat, -1); fin = FIN_INFTY; bindings = b} )
                       )
        )
     | _ -> None
@@ -272,7 +272,7 @@ and t_Cat1_xtend_infty ter pat =
                                         [] -> raise (Illformed_bindings_detected (t, pat, "t_Cat1_xtend_infty"))
                                       | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
                                              in
-                                             Some {ter = t; equ = e; pat = Pat_una (CROSS, pat, -1); fin = FIN_INFTY; bindings = b}
+                                             Some {ter = ter; equ = e; pat = Pat_una (CROSS, pat, -1); fin = FIN_INFTY; bindings = b}
                                      )
                       )
        )
@@ -325,7 +325,7 @@ and t_Dup_xtend_infty ter pat =
                                         [] -> raise (Illformed_bindings_detected (t, pat, "t_Dup_xtend_infty"))
                                       | b -> let e = Term_bin (VEE, b_h.ter, b_t.equ)
                                              in
-                                             Some {ter = t; equ = e; pat = Pat_una (STROK, pat, -1); fin = FIN_INFTY; bindings = b}
+                                             Some {ter = ter; equ = e; pat = Pat_una (STROK, pat, -1); fin = FIN_INFTY; bindings = b}
                                      )
                       )
        )
@@ -363,7 +363,7 @@ and t_Alt_xtend ter pat =
       Pat_bin (ALT, p_L, p_R, ad) -> let r_L = (tourbillon t p_L)
                                      in
                                      (match r_L with
-                                        Some b_L -> Some {ter = t; equ = b_L.ter; pat = pat; fin = FIN_L; bindings = [b_L]}
+                                        Some b_L -> Some {ter = ter; equ = b_L.ter; pat = pat; fin = FIN_L; bindings = [b_L]}
                                       | None -> let r_R = (tourbillon t p_R)
                                                 in
                                                 (match r_R with

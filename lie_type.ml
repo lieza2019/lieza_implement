@@ -7,6 +7,8 @@ type term_ope =
   | STROK
   | OPT
   | ALT
+  | LEFT
+  | RIGHT
   | WEDGE
   | VEE
   | SEQ;;
