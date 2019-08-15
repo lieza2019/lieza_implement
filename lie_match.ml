@@ -17,16 +17,23 @@ let binds_union bindings1 bindings2 =
 
 
 
+
 let rec is_nil t =
   match t with
     Term_ent (NIL, id, sp, ad) -> Some t
   | Term_una (op, t1) -> (match op with
                             STAR -> (match (is_nil t1) with
-                                       Some t1' -> Some (Term_una (STAR, t1'))
+                                       Some (Term_ent (NIL, id, sp, ad)) -> Some (Term_una ( STAR, (Term_ent (NIL, id, sp, ad)) ))
+                                     | Some t1' -> Some t1'
                                      | None -> None)
+                          | CROSS -> is_nil t1
+                          | STROK -> is_nil t1
                           | OPT -> (match (is_nil t1) with
-                                      Some t1' -> Some (Term_una (OPT, t1'))
+                                      Some (Term_ent (NIL, id, sp, ad)) -> Some (Term_una ( OPT, (Term_ent (NIL, id, sp, ad)) ))
+                                    | Some t1' -> Some t1'
                                     | None -> None)
+                          | LEFT -> is_nil t1
+                          | RIGHT -> is_nil t1
                           | _ -> None)
   | Term_bin (op, t_l, t_r) -> if ((op == WEDGE) || (op == VEE)) then
                                  (match (is_nil t_l) with

@@ -192,3 +192,51 @@ let rec resolv pat judgement =
                              | _ -> raise (Illformed_bindings_detected (t, p, "resolv")) )
                          | _ -> raise (Illegal_pat_detected (t, p, "resolv"))
                         );;
+
+
+let rec canonicalize binding = 
+  match binding with
+    {ter = t; equ = t_e; pat = p; fin = fin_sym; bindings = bindings'} ->
+    (match fin_sym with
+       FIN_GND -> t_e
+     | FIN_DEF -> t_e
+     | FIN_NIL -> t_e
+     | FIN_WEDGE -> (match t_e with
+                       Term_bin (WEDGE, e_l, e_r) -> resolv_bin WEDGE t (e_l, e_r) p bindings'
+                     | _ -> raise (Illformed_equterm_detected (t_e, p, "resolv")) )
+     | FIN_VEE -> (match t_e with
+                     Term_bin (VEE, e_l, e_r) -> resolv_bin VEE t (e_l, e_r) p bindings'
+                   | _ -> raise (Illformed_equterm_detected (t_e, p, "resolv")) )
+     | FIN_SOL -> let t1's_binding = (lkup_bindings t_e bindings')
+                  in
+                  (match t1's_binding with
+                     None -> (match p with
+                                Pat_una (OPT, p1, ad) ->
+                                 raise (Failed_on_mapping_over_bindings (t_e, p1, "resolV"))
+                              | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
+                   | Some b_1 -> synthesize b_1
+                  )
+     | FIN_INFTY -> (match t_e with
+                       Term_bin (WEDGE, e_h, e_t') -> resolv_n'ary WEDGE t (e_h, e_t') p bindings'
+                     | Term_bin (VEE, e_h, e_t') -> resolv_n'ary VEE t (e_h, e_t') p bindings'
+                     | _ -> raise (Illformed_equterm_detected (t_e, p, "resolv")) )
+     | FIN_L -> let t1's_binding = (lkup_bindings t_e bindings')
+                in
+                (match t1's_binding with
+                   None -> (match p with
+                              Pat_bin (ALT, p_l, p_r, ad) ->
+                               raise (Failed_on_mapping_over_bindings (t_e, p_l, "resolv"))
+                            | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
+                 | Some b_l -> synthesize b_l
+                )
+     | FIN_R -> let t1's_binding = (lkup_bindings t_e bindings')
+                in
+                (match t1's_binding with
+                   None -> (match p with
+                              Pat_bin (op, p_l, p_r, ad) ->
+                               raise (Failed_on_mapping_over_bindings (t_e, p_r, "resolv"))
+                            | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
+                 | Some b_r -> synthesize b_r
+                )
+    );;
+
