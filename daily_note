@@ -22,7 +22,7 @@ matched_form (typematch (compile "HR_11L & (((LR_11 | RKR_21) & (LR_12 | NKR_21 
 
 
 2019/6/5:
-  consult_bindings (compile_pat "(LR | (NKR % RKR)!)*") (typematch (compile "HR_11L & HR_12L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)"));;
+  resolv (compile_pat "(LR | (NKR % RKR)!)*") (typematch (compile "HR_11L & HR_12L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)"));;
 
 LR_DP & TR_1R & TR_22i & RSR_22T & WLR_22 & ASR_13R & RSR_C & RSR_CT & TR_C & TR_21 & RSR_21T & WLR_21 & LSR_CT & LSR_21T & ASR_11R & MSlR_1R & SSlR_21T & ASR_1R & KR_21 & ZR_1R : LR & TR* & (ASR % LSR % RSR)* & WLR* & (ASR % LSR % RSR)* & TR* & (ASR % LSR % RSR % WLR)* & MSlR* & SSlR* & (ASR % LSR % RSR)* & KR* & ZR
 

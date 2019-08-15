@@ -21,7 +21,12 @@ let rec is_nil t =
   match t with
     Term_ent (NIL, id, sp, ad) -> Some t
   | Term_una (op, t1) -> (match op with
-                            STAR -> (is_nil t1)
+                            STAR -> (match (is_nil t1) with
+                                       Some t1' -> Some (Term_una (STAR, t1'))
+                                     | None -> None)
+                          | OPT -> (match (is_nil t1) with
+                                      Some t1' -> Some (Term_una (OPT, t1'))
+                                    | None -> None)
                           | _ -> None)
   | Term_bin (op, t_l, t_r) -> if ((op == WEDGE) || (op == VEE)) then
                                  (match (is_nil t_l) with
@@ -77,14 +82,14 @@ let rec tourbillon ter pat =
                                  |  None -> (match (t_Dup_xtend_infty ter p_1) with
                                                None -> None
                                              | Some judge_matched -> Some judge_matched) )
-  | Pat_bin (ALT, p_L, p_R, ad) -> (match (t_Alt_xtend ter pat) with
-                                      None -> None
-                                    | Some judge_matched -> Some judge_matched)
   | Pat_una (OPT, p_1, ad) -> (match (t_Opt_xtend_nil ter pat) with
                                  Some judge_matched -> Some judge_matched
                                | None -> (match (t_Opt_xtend_sol ter p_1) with
                                             None -> None
                                           | Some judge_matched -> Some judge_matched) )
+  | Pat_bin (ALT, p_L, p_R, ad) -> (match (t_Alt_xtend ter pat) with
+                                      None -> None
+                                    | Some judge_matched -> Some judge_matched)
   | _ -> raise (Illegal_pat_detected (ter, pat, "tourbillon"))
 
 

@@ -157,7 +157,7 @@ let rec equiv_terms (t_orig, t_resume, assoc_dir) ena_bumpup =
                   in
                   match equ_assoc with
                     (None, dir) -> (None, [], dir)
-                  | (Some e, dir) -> (Some e, (derive t_orig), dir)
+                  | (Some e, dir) -> (Some e, (derive e), dir)
 
 
 and gath_equivs t =
