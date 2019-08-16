@@ -29,5 +29,5 @@ LR_DP & TR_1R & TR_22i & RSR_22T & WLR_22 & ASR_13R & RSR_C & RSR_CT & TR_C & TR
 
 TR_1R & TR_22i & RSR_22T & WLR_22 & ASR_13R & RSR_C & RSR_CT & : TR* & (ASR % LSR % RSR % WLR)* & (ASR % LSR % RSR)* & TR* & (ASR % LSR % RSR % WLR)* & MSlR* & SSlR* & (ASR % LSR % RSR)*
 
-
+2019/8/16:
 canon (typematch (compile "TR_1 & TR_2 & TR_3 : TR*"));;

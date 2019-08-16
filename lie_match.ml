@@ -97,7 +97,7 @@ let rec tourbillon ter pat =
   | Pat_bin (ALT, p_L, p_R, ad) -> (match (t_Alt_xtend ter pat) with
                                       None -> None
                                     | Some judge_matched -> Some judge_matched)
-  | _ -> raise (Illegal_pat_detected (ter, pat, "tourbillon"))
+  | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
 
 
 and t_Atom0_xtend ter pat =
@@ -106,7 +106,7 @@ and t_Atom0_xtend ter pat =
       Pat_ent (ENT, p_id, p_ad) -> (match t with   
                                       Term_ent (ENT, t_id, t_sp, t_ad) -> if (t_id = p_id) then Some t else None
                                     | _ -> None)
-    | _ -> raise (Illegal_pat_detected (ter, pat, "t_Atom0_xtend"))
+    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
   and match_atomic tl pat =
     match tl with
       [] -> None
@@ -135,14 +135,14 @@ and t_Cas_xtend ter pat =
                                                                 let bindings' = (binds_union [b_1st] [b_2nd])
                                                                 in
                                                                 (match bindings' with
-                                                                   [] -> raise (Illformed_bindings_detected (t, pat, "t_Cas_xtend"))
+                                                                   [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                                                  | b -> let e = Term_bin (WEDGE, b_1st.ter, b_2nd.ter) in
                                                                         Some {ter = ter; equ = e; pat = pat; fin = FIN_WEDGE; bindings = b} )
                                                             )
                                            )
                                         | _ -> None
                                        )
-    | _ -> raise (Illegal_pat_detected (ter, pat, "t_Cas_xtend"))
+    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
   and match_cat tl pat =
     match tl with
       [] -> None
@@ -170,14 +170,14 @@ and t_Par_xtend ter pat =
                                                               let bindings' = (binds_union [b_1st] [b_2nd])
                                                               in
                                                               (match bindings' with
-                                                                 [] -> raise (Illformed_bindings_detected (t, pat, "t_Par_xtend"))
+                                                                 [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                                                | b -> let e = Term_bin (VEE, b_1st.ter, b_2nd.ter) in
                                                                       Some {ter = ter; equ = e; pat = pat; fin = FIN_VEE; bindings = b} )
                                                           )
                                          )
                                       | _ -> None
                                      )
-    | _ -> raise (Illegal_pat_detected (ter, pat, "t_Par_xtend"))
+    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
   and match_par tl pat =
     match tl with
       [] -> None
@@ -194,7 +194,7 @@ and t_Cat0_xtend_nil ter pat =
   | Some v -> let v' = (match v with
                           Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> v
                         | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> Term_una ( STAR, Term_ent (NIL, id, sp, ad) )
-                        | _ -> raise (Illformed_equterm_detected (v, pat, "t_Cat0_xtend_nil")) )
+                        | _ -> raise (Illformed_equterm_detected (v, pat, __LINE__, __FILE__)) )
               in
               Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
 
@@ -234,7 +234,7 @@ and t_Cat0_xtend_infty ter pat =
                        | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
                                      in
                                      (match bindings' with
-                                        [] -> raise (Illformed_bindings_detected (t, pat, "t_Cat0_xtend_infty"))
+                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                       | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
                                              in
                                              Some {ter = ter; equ = e; pat = Pat_una (STAR, pat, -1); fin = FIN_INFTY; bindings = b} )
@@ -286,7 +286,7 @@ and t_Cat1_xtend_infty ter pat =
                        | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
                                      in
                                      (match bindings' with
-                                        [] -> raise (Illformed_bindings_detected (t, pat, "t_Cat1_xtend_infty"))
+                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                       | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
                                              in
                                              Some {ter = ter; equ = e; pat = Pat_una (CROSS, pat, -1); fin = FIN_INFTY; bindings = b}
@@ -339,7 +339,7 @@ and t_Dup_xtend_infty ter pat =
                        | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
                                      in
                                      (match bindings' with
-                                        [] -> raise (Illformed_bindings_detected (t, pat, "t_Dup_xtend_infty"))
+                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                       | b -> let e = Term_bin (VEE, b_h.ter, b_t.equ)
                                              in
                                              Some {ter = ter; equ = e; pat = Pat_una (STROK, pat, -1); fin = FIN_INFTY; bindings = b}
@@ -363,7 +363,7 @@ and t_Opt_xtend_nil ter pat =
   | Some v -> let v' = (match v with
                         | Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> Term_una ( OPT, Term_ent (NIL, id, sp, ad) )
                         | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> v
-                        | _ -> raise (Illformed_equterm_detected (v, pat, "t_Opt_xtend_nil")) )
+                        | _ -> raise (Illformed_equterm_detected (v, pat, __LINE__, __FILE__)) )
               in
               Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
 
@@ -393,7 +393,7 @@ and t_Alt_xtend ter pat =
                                                  | None -> None
                                                 )
                                      )
-    | _ -> raise (Illegal_pat_detected (ter, pat, "t_Alt_xtend"))
+    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
   and match_alt tl pat =
     match tl with
       [] -> None

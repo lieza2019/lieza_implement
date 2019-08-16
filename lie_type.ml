@@ -43,11 +43,11 @@ type binding =
 
 
 
-exception Illegal_pat_detected of term * pattern * string;;
-exception Illformed_bindings_detected of term * pattern * string;;
-exception Illformed_equterm_detected of term * pattern * string;;
-exception Failed_on_mapping_over_bindings of term * pattern * string;;
-exception Illformed_judge_detected of term * pattern * string;;
+exception Illegal_pat_detected of term * pattern * int * string;;
+exception Illformed_bindings_detected of term * pattern * int * string;;
+exception Illformed_equterm_detected of term * pattern * int * string;;
+
+
 
 
 let rec set_nelems tl =
