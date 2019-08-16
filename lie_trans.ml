@@ -202,41 +202,171 @@ let rec canonicalize binding =
      | FIN_DEF -> t_e
      | FIN_NIL -> t_e
      | FIN_WEDGE -> (match t_e with
-                       Term_bin (WEDGE, e_l, e_r) -> resolv_bin WEDGE t (e_l, e_r) p bindings'
-                     | _ -> raise (Illformed_equterm_detected (t_e, p, "resolv")) )
+                       Term_bin (WEDGE, e_1, e_2) ->
+                        (match (lkup_bindings e_1 bindings') with
+                           Some b_1 -> let c_1 = (canonicalize b_1)
+                                       in
+                                       (match (lkup_bindings e_2 bindings') with
+                                          Some b_2 -> let c_2 = (canonicalize b_2) in Term_bin (WEDGE, c_1, c_2)
+                                        | None -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                       )
+                         | None -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                        )
+                     | _ -> raise (Illformed_equterm_detected (t_e, p, "canonicalize"))
+                    )
      | FIN_VEE -> (match t_e with
-                     Term_bin (VEE, e_l, e_r) -> resolv_bin VEE t (e_l, e_r) p bindings'
-                   | _ -> raise (Illformed_equterm_detected (t_e, p, "resolv")) )
-     | FIN_SOL -> let t1's_binding = (lkup_bindings t_e bindings')
-                  in
-                  (match t1's_binding with
-                     None -> (match p with
-                                Pat_una (OPT, p1, ad) ->
-                                 raise (Failed_on_mapping_over_bindings (t_e, p1, "resolV"))
-                              | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
-                   | Some b_1 -> synthesize b_1
+                     Term_bin (VEE, e_1, e_2) ->
+                      (match (lkup_bindings e_1 bindings') with
+                         Some b_1 -> let c_1 = (canonicalize b_1)
+                                     in
+                                     (match (lkup_bindings e_2 bindings') with
+                                        Some b_2 -> let c_2 = (canonicalize b_2) in Term_bin (VEE, c_1, c_2)
+                                      | None -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                     )
+                       | None -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                      )
+                   | _ -> raise (Illformed_equterm_detected (t_e, p, "canonicalize"))
                   )
-     | FIN_INFTY -> (match t_e with
-                       Term_bin (WEDGE, e_h, e_t') -> resolv_n'ary WEDGE t (e_h, e_t') p bindings'
-                     | Term_bin (VEE, e_h, e_t') -> resolv_n'ary VEE t (e_h, e_t') p bindings'
-                     | _ -> raise (Illformed_equterm_detected (t_e, p, "resolv")) )
-     | FIN_L -> let t1's_binding = (lkup_bindings t_e bindings')
-                in
-                (match t1's_binding with
-                   None -> (match p with
-                              Pat_bin (ALT, p_l, p_r, ad) ->
-                               raise (Failed_on_mapping_over_bindings (t_e, p_l, "resolv"))
-                            | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
-                 | Some b_l -> synthesize b_l
-                )
-     | FIN_R -> let t1's_binding = (lkup_bindings t_e bindings')
-                in
-                (match t1's_binding with
-                   None -> (match p with
-                              Pat_bin (op, p_l, p_r, ad) ->
-                               raise (Failed_on_mapping_over_bindings (t_e, p_r, "resolv"))
-                            | _ -> raise (Illformed_judge_detected (t, p, "resolv")) )
-                 | Some b_r -> synthesize b_r
-                )
-    );;
+     | FIN_SOL -> (match p with
+                     Pat_una (STAR, p1, ad) -> (match (lkup_bindings t_e bindings') with
+                                                  Some b -> Term_una (STAR, (canonicalize b))
+                                                | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                   | Pat_una (CROSS, p1, ad) -> (match (lkup_bindings t_e bindings') with
+                                                   Some b -> Term_una (CROSS, (canonicalize b))
+                                                 | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                   | Pat_una (STROK, p1, ad) -> (match (lkup_bindings t_e bindings') with
+                                                   Some b -> Term_una (STROK, (canonicalize b))
+                                                 | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                   | Pat_una (OPT, p1, ad) -> (match (lkup_bindings t_e bindings') with
+                                                 Some b -> Term_una (OPT, (canonicalize b))
+                                               | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                   | _ -> raise (Illegal_pat_detected (t, p, "canonicalize"))
+                  )
+     | FIN_INFTY -> (match p with
+                       Pat_una (STAR, p1, ad) ->
+                        (match t_e with
+                           Term_bin (WEDGE, e_h, e_t) ->
+                            (match (lkup_bindings e_h bindings') with
+                               Some b_h -> (match (lkup_bindings e_t bindings') with
+                                              Some b_t -> Term_bin ( STAR, (canonicalize b_h), (canonicalize b_t) )
+                                            | None -> (match (bindings_sub [b_h] bindings') with
+                                                         [] -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                                       | [b'_t] -> Term_bin ( STAR, (canonicalize b_h), (canon_cat0 t e_t p b'_t) )
+                                                       | _ -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                                      )
+                                           )
+                             | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                         | _ -> raise (Illformed_equterm_detected (t_e, p, "canonicalize"))
+                        )
+                     | Pat_una (CROSS, p1, ad) ->
+                        (match t_e with
+                           Term_bin (WEDGE, e_h, e_t) ->
+                            (match (lkup_bindings e_h bindings') with
+                               Some b_h -> (match (lkup_bindings e_t bindings') with
+                                              Some b_t -> Term_bin ( CROSS, (canonicalize b_h), (canonicalize b_t) )
+                                            | None -> (match (bindings_sub [b_h] bindings') with
+                                                         [] -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                                       | [b'_t] -> Term_bin ( CROSS, (canonicalize b_h), (canon_cat1 t e_t p b'_t) )
+                                                       | _ -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                                      )
+                                           )
+                             | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                         | _ -> raise (Illformed_equterm_detected (t_e, p, "canonicalize"))
+                        )
+                     | Pat_una (STROK, p1, ad) ->
+                        (match t_e with
+                           Term_bin (VEE, e_h, e_t) ->
+                            (match (lkup_bindings e_h bindings') with
+                               Some b_h -> (match (lkup_bindings e_t bindings') with
+                                              Some b_t -> Term_bin ( STROK, (canonicalize b_h), (canonicalize b_t) )
+                                            | None -> (match (bindings_sub [b_h] bindings') with
+                                                         [] -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                                       | [b'_t] -> Term_bin ( STROK, (canonicalize b_h), (canon_dup t e_t p b'_t) )
+                                                       | _ -> raise (Illformed_bindings_detected (t, p, "canonicalize"))
+                                                      )
+                                           )
+                             | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+                         | _ -> raise (Illformed_equterm_detected (t_e, p, "canonicalize"))
+                        )
+                     | _ -> raise (Illegal_pat_detected (t, p, "canonicalize"))
+                    )
+     | FIN_L -> (match (lkup_bindings t_e bindings') with
+                   Some b -> Term_una (LEFT, (canonicalize b))
+                 | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+     | FIN_R -> (match (lkup_bindings t_e bindings') with
+                   Some b -> Term_una (RIGHT, (canonicalize b))
+                 | None -> raise (Illformed_bindings_detected (t, p, "canonicalize")) )
+    )
 
+
+and canon_cat0 t_orig t p b =
+  match b with
+    {ter = _; equ = _; pat = _; fin = _; bindings = bindings'} ->
+    (match (lkup_bindings t bindings') with
+       Some b' -> Term_una ( STAR, (canonicalize b') )
+     | None -> (match t with
+                  Term_bin (WEDGE, t_h, t_t) ->
+                   (match (lkup_bindings t_h bindings') with
+                      Some b_h -> (match (bindings_sub [b_h] bindings') with
+                                     [] -> raise (Illformed_bindings_detected (t_orig, p, "canon_cat0"))
+                                   | [b_t] -> let c_tl = (canon_cat0 t_orig t_t p b_t)
+                                              in
+                                              (match c_tl with
+                                                 Term_una (STAR, tl) -> Term_bin (STAR, (canonicalize b_h), tl)
+                                               | _ -> Term_bin (STAR, (canonicalize b_h), c_tl) )
+                                   | _ -> raise (Illformed_bindings_detected (t_orig, p, "canon_cat0"))
+                                  )
+                    | None -> Term_una ( STAR, t )
+                   )
+                | _ -> Term_una ( STAR, t )
+               )
+    )
+
+
+and canon_cat1 t_orig t p b =
+  match b with
+    {ter = _; equ = _; pat = _; fin = _; bindings = bindings'} ->
+    (match (lkup_bindings t bindings') with
+       Some b' -> Term_una ( CROSS, (canonicalize b') )
+     | None -> (match t with
+                  Term_bin (WEDGE, t_h, t_t) ->
+                   (match (lkup_bindings t_h bindings') with
+                      Some b_h -> (match (bindings_sub [b_h] bindings') with
+                                     [] -> raise (Illformed_bindings_detected (t_orig, p, "canon_cat1"))
+                                   | [b_t] -> let c_tl = (canon_cat1 t_orig t_t p b_t)
+                                              in
+                                              (match c_tl with
+                                                 Term_una (CROSS, tl) -> Term_bin (CROSS, (canonicalize b_h), tl)
+                                               | _ -> Term_bin (CROSS, (canonicalize b_h), c_tl) )
+                                   | _ -> raise (Illformed_bindings_detected (t_orig, p, "canon_cat1"))
+                                  )
+                    | None -> Term_una ( CROSS, t )
+                   )
+                | _ -> Term_una ( CROSS, t )
+               )
+    )
+    
+
+and canon_dup t_orig t p b =
+  match b with
+    {ter = _; equ = _; pat = _; fin = _; bindings = bindings'} ->
+    (match (lkup_bindings t bindings') with
+       Some b' -> Term_una ( STROK, (canonicalize b') )
+     | None -> (match t with
+                  Term_bin (VEE, t_h, t_t) ->
+                   (match (lkup_bindings t_h bindings') with
+                      Some b_h -> (match (bindings_sub [b_h] bindings') with
+                                     [] -> raise (Illformed_bindings_detected (t_orig, p, "canon_dup"))
+                                   | [b_t] -> let c_tl = (canon_dup t_orig t_t p b_t)
+                                              in
+                                              (match c_tl with
+                                                 Term_una (STROK, tl) -> Term_bin (STROK, (canonicalize b_h), tl)
+                                               | _ -> Term_bin (STROK, (canonicalize b_h), c_tl) )
+                                   | _ -> raise (Illformed_bindings_detected (t_orig, p, "canon_dup"))
+                                  )
+                    | None -> Term_una ( STROK, t )
+                   )
+                | _ -> Term_una ( STROK, t )
+               )
+    )
+;;
