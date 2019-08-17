@@ -14,6 +14,7 @@ open Printf
 open Lie_type
 open Lie_parser
 open Lie_lexer
+open Lie_trans
 
 
 
@@ -125,19 +126,19 @@ let rec discomp_ter ter =
                                    Term_ent (ENT, id1, sp1, ad1) ->
                                     (match tr with
                                        Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
-                                     | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (_, t1) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
                                      | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " & (" ^ (discomp_ter tr) ^ "))"
                                      | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                  | Term_una (_, tl1) ->
                                     (match tr with
                                        Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
-                                     | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (_, t1) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
                                      | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " & (" ^ (discomp_ter tr) ^ "))"
                                      | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                  | Term_bin (_, tll, tlr) ->
                                     (match tr with
                                        Term_ent (ENT, _, _, _) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
-                                     | Term_una (_, t21) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
+                                     | Term_una (_, t1) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
                                      | Term_bin (_, trl, trr) -> "((" ^ (discomp_ter tl) ^ ") & (" ^ (discomp_ter tr) ^ "))"
                                      | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                  | _ -> raise (Illegal_ter_detected (tl, __LINE__, __FILE__))
@@ -146,19 +147,19 @@ let rec discomp_ter ter =
                                  Term_ent (ENT, id1, sp1, ad1) ->
                                   (match tr with
                                      Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
-                                   | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (_, t1) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
                                    | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " | (" ^ (discomp_ter tr) ^ "))"
                                    | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                | Term_una (_, tl1) ->
                                   (match tr with
                                      Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
-                                   | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (_, t1) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
                                    | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " | (" ^ (discomp_ter tr) ^ "))"
                                    | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                | Term_bin (_, tll, tlr) ->
                                   (match tr with
                                      Term_ent (ENT, _, _, _) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
-                                   | Term_una (_, t21) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
+                                   | Term_una (_, t1) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
                                    | Term_bin (_, trl, trr) -> "((" ^ (discomp_ter tl) ^ ") | (" ^ (discomp_ter tr) ^ "))"
                                    | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                | _ -> raise (Illegal_ter_detected (tl, __LINE__, __FILE__))
@@ -166,14 +167,22 @@ let rec discomp_ter ter =
   | _ -> raise (Illegal_ter_detected (ter, __LINE__, __FILE__));;
 
 
+let term0 t =
+  discomp_ter t;;
+
+
+let term1 t =
+  match t with
+    Some t -> term0 t
+  | None -> "";;
+
 let term judgement =
   match judgement with
-    Some {ter = t} -> discomp_ter t
+    Some {ter = t} -> term0 t
   | None -> "";;
 
 
 let cterm judgement =
   match (canon judgement) with
-    Some c_t -> discomp_ter c_t
+    Some c_t -> term0 c_t
   | None -> "";;
-

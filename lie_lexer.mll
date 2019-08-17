@@ -6,7 +6,7 @@
 let space = [' ' '\t' '\n' '\r']
 let digit = ['0'-'9']
 let alpha = ['A'-'Z' 'a'-'z']
-let alnum = alpha | digit
+let alnum = alpha | digit | ['#']
 
 rule token = parse
   (* operators *)
