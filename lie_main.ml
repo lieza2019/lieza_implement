@@ -10,6 +10,7 @@
  *)
 
 
+open List
 open Printf
 open Lie_type
 open Lie_parser
@@ -175,6 +176,13 @@ let term1 t =
   match t with
     Some t -> term0 t
   | None -> "";;
+
+
+let foreach ts =
+  match ts with
+    None -> []
+  | Some tl -> map term0 tl;;
+
 
 let term judgement =
   match judgement with

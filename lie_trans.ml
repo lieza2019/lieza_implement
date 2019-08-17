@@ -147,7 +147,8 @@ let rec resolv pat judgement =
                          | Pat_una (STROK, p_1, ad) -> walk bindings'
                          | Pat_una (OPT, p_1, ad) ->
                             (match bindings' with
-                               (b_opt::[]) -> resolv pat (Some b_opt)
+                               [] -> None
+                             | (b_opt::[]) -> resolv pat (Some b_opt)
                              | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
                          | Pat_bin (ALT, p_L, p_R, ad) ->
                             (match bindings' with

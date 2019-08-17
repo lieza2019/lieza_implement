@@ -33,7 +33,26 @@ TR_1R & TR_22i & RSR_22T & WLR_22 & ASR_13R & RSR_C & RSR_CT & : TR* & (ASR % LS
 canon (typematch (compile "TR_1 & TR_2 & TR_3 : TR*"));;
 
 2019/8/17:
-term (typematch (compile "TR_1 & (TR_2 | NKR_#3) & TLSR_TR4 : (TR* & (TR | (NKR % RKR)!*))+ & (TRSR % TLSR)*"));;
+term (typematch (compile "TR_1 & (TR_2 | NKR_#3) & TLSR_TR4 : (TR | (NKR % RKR)!?)+ & (TRSR % TLSR)*"));;
 
-let tgt_pat = cli_pat (compile "* : (NKR % RKR)");;
-resolv tgt_pat (typematch (compile "TR_1 & (TR_2 | NKR_#3) & (TR_9 | NKR_#7) & TLSR_TR4 : (TR | (NKR % RKR)!*)+ & (TLSR % TRSR)*"))
+let sig_ctrl = cli_pat (compile "* : (TR | (NKR % RKR)!?)+");;
+foreach (resolv sig_ctrl (typematch (compile "TR_1 & (TR_2 | NKR_#3) & TLSR_TR4 : (TR | (NKR % RKR)!?)+ & (TRSR % TLSR)*")));;
+
+let sig_ctrl = cli_pat (compile "* : (NKR % RKR)!");;
+foreach (resolv sig_ctrl (typematch (compile "TR_1 & (TR_2 | NKR_#3) & TLSR_TR4 : (TR | (NKR % RKR)!?)+ & (TRSR % TLSR)*")));;
+
+let sig_ctrl = cli_pat (compile "* : (TRSR % TLSR)*");;
+foreach (resolv sig_ctrl (typematch (compile "TR_1 & (TR_2 | NKR_#3) & TLSR_TR4 : (TR | (NKR % RKR)!?)+ & (TRSR % TLSR)*")));;
+
+
+let tgt_pat = cli_pat (compile "* : (NKR % RKR)!");;
+foreach (resolv tgt_pat (typematch (compile "TR_1 & (TR_2 | NKR_#3) & (TR_9 | NKR_#7) & TLSR_TR4 : (TR | (NKR % RKR)!*)+ & (TLSR % TRSR)*")));;
+
+
+term (typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_#21 | RKR_#22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)"));;
+
+let ver_ASR = cli_pat (compile "* : ASR");;
+foreach (resolv ver_ASR (typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_#21 | RKR_#22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)")));;
+
+let ver_appTR = cli_pat (compile "* : TR+");;
+foreach (resolv ver_appTR (typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_#21 | RKR_#22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)")));;

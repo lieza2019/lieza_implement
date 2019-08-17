@@ -5,6 +5,7 @@
 #load "lie_lexer.cmo";;
 #load "lie_parser.cmo";;
 #load "lie_main.cmo";;
+open List
 open Lie_type;;
 open Lie_equiv;;
 open Lie_match;;
