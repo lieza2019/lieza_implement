@@ -85,11 +85,11 @@ and resolv_n'ary op ter (e_l, e_r) pat bindings' =
     Some b_l ->
      let bindings'' = (bindings_sub [b_l] bindings')
      in (match bindings'' with
-           
            (b_t'::bs) -> (match bs with
                             [] -> Term_bin (op, (synthesize b_l), (synthesize b_t'))
-                          | b_t_t'' -> let b_t = {ter = e_r; equ = e_r; pat = pat; fin = FIN_INFTY; bindings = bindings''}
-                                       in Term_bin (op, (synthesize b_l), (synthesize b_t)) )
+                          | b_t_t'' ->
+                             let b_t = {ter = e_r; equ = e_r; pat = pat; fin = FIN_INFTY; bindings = bindings''}
+                             in (Term_bin (op, (synthesize b_l), (synthesize b_t))) )
          | _ -> raise (Illformed_bindings_detected (ter, pat, __LINE__, __FILE__))
         )
   | None -> raise (Illformed_bindings_detected (ter, pat, __LINE__, __FILE__));;
@@ -98,10 +98,22 @@ and resolv_n'ary op ter (e_l, e_r) pat bindings' =
 let matched_form judgement =
   match judgement with
     None -> None
-  | Some binding -> Some (synthesize binding);;
+  | Some binding -> Some [(synthesize binding)];;
 
 
 let rec resolv pat judgement =
+  let combine r_h r_tl =
+    match r_h with
+      None -> r_tl
+    | Some ts_h -> (match r_tl with
+                      None -> r_h
+                    | Some ts_tl -> Some (ts_h @ ts_tl) )
+  in
+  let rec walk bl =
+    match bl with
+      [] -> None
+    | (b::bs) -> combine (resolv pat (Some b)) (walk bs)
+  in
   match judgement with
     None -> None
   | Some binding -> match binding with
@@ -113,54 +125,33 @@ let rec resolv pat judgement =
                          | Pat_bin (WEDGE, p_1, p_2, ad) ->
                             (match bindings' with
                                (b_1::b_2::[]) -> let r_1 = (resolv pat (Some b_1))
-                                                 in
-                                                 (match r_1 with
-                                                    None -> (resolv pat (Some b_2))
-                                                  | _ -> r_1)
+                                                 in (match r_1 with
+                                                       None -> (resolv pat (Some b_2))
+                                                     | Some ts_1 -> (match (resolv pat (Some b_2)) with
+                                                                       None -> r_1
+                                                                     | Some ts_2 -> Some (ts_1 @ ts_2) )
+                                                    )
                              | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
                          | Pat_bin (VEE, p_1, p_2, ad) ->
                             (match bindings' with
                                (b_1::b_2::[]) -> let r_1 = (resolv pat (Some b_1))
-                                                 in
-                                                 (match r_1 with
-                                                    None -> (resolv pat (Some b_2))
-                                                  | _ -> r_1)
+                                                 in (match r_1 with
+                                                       None -> (resolv pat (Some b_2))
+                                                     | Some ts_1 -> (match (resolv pat (Some b_2)) with
+                                                                       None -> r_1
+                                                                     | Some ts_2 -> Some (ts_1 @ ts_2) )
+                                                    )
                              | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
-                         | Pat_una (STAR, p_1, ad) ->
+                         | Pat_una (STAR, p_1, ad) -> walk bindings'
+                         | Pat_una (CROSS, p_1, ad) -> walk bindings'
+                         | Pat_una (STROK, p_1, ad) -> walk bindings'
+                         | Pat_una (OPT, p_1, ad) ->
                             (match bindings' with
-                               [] -> None
-                             | (b_sol::[]) -> resolv pat (Some b_sol)
-                             | (b_h::b_t'::[]) -> let r_h = (resolv pat (Some b_h))
-                                                  in
-                                                  (match r_h with
-                                                     None -> (resolv pat (Some b_t'))
-                                                   | _ -> r_h)
-                             | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
-                         | Pat_una (CROSS, p_1, ad) ->
-                            (match bindings' with
-                               (b_sol::[]) -> resolv pat (Some b_sol)
-                             | (b_h::b_t'::[]) -> let r_h = (resolv pat (Some b_h))
-                                                  in
-                                                  (match r_h with
-                                                     None -> (resolv pat (Some b_t'))
-                                                   | _ -> r_h)
-                             | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
-                         | Pat_una (STROK, p_1, ad) ->
-                            (match bindings' with
-                               (b_sol::[]) -> resolv pat (Some b_sol)
-                             | (b_h::b_t'::[]) -> let r_h = (resolv pat (Some b_h))
-                                                  in
-                                                  (match r_h with
-                                                     None -> (resolv pat (Some b_t'))
-                                                   | _ -> r_h)
+                               (b_opt::[]) -> resolv pat (Some b_opt)
                              | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
                          | Pat_bin (ALT, p_L, p_R, ad) ->
                             (match bindings' with
                                (b_alt::[]) -> resolv pat (Some b_alt)
-                             | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
-                         | Pat_una (OPT, p_1, ad) ->
-                            (match bindings' with
-                               (b_opt::[]) -> resolv pat (Some b_opt)
                              | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
                          | _ -> raise (Illegal_pat_detected (t, p, __LINE__, __FILE__))
                         );;

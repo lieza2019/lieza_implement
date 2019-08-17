@@ -34,4 +34,6 @@ canon (typematch (compile "TR_1 & TR_2 & TR_3 : TR*"));;
 
 2019/8/17:
 term (typematch (compile "TR_1 & (TR_2 | NKR_#3) & TLSR_TR4 : (TR* & (TR | (NKR % RKR)!*))+ & (TRSR % TLSR)*"));;
-term1 typematch (compile "TR_1 & (TR_2 | NKR_#3) & (TR_9 | NKR_#7) & TLSR_TR4 : (TR | (NKR % RKR)!*)+ & (TLSR % TRSR)*");;
+
+let tgt_pat = cli_pat (compile "* : (NKR % RKR)");;
+resolv tgt_pat (typematch (compile "TR_1 & (TR_2 | NKR_#3) & (TR_9 | NKR_#7) & TLSR_TR4 : (TR | (NKR % RKR)!*)+ & (TLSR % TRSR)*"))
