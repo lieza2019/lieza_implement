@@ -16,6 +16,8 @@ open Lie_parser
 open Lie_lexer
 
 
+
+
 let pat_addr_initial = 1;;
 let ter_addr_initial = 1;;
 
@@ -86,69 +88,92 @@ let compile_pat pat_str =
 
 
 let rec discomp_ter ter =
+  let rec tail_cat0 t =
+    match t with
+      Term_bin (STAR, th, ts) -> (discomp_ter th) ^ "," ^ (tail_cat0 ts)
+    | _ -> (discomp_ter t)
+  in
+  let rec tail_cat1 t =
+    match t with
+      Term_bin (CROSS, th, ts) -> (discomp_ter th) ^ "," ^ (tail_cat1 ts)
+    | _ -> (discomp_ter t)
+  in
+  let rec tail_dup t =
+    match t with
+      Term_bin (STROK, th, ts) -> (discomp_ter th) ^ "," ^ (tail_dup ts)
+    | _ -> (discomp_ter t)
+  in
   match ter with
     Term_ent (op, id, sp, ad) -> id ^ (if (sp <> "") then  ("_" ^ sp) else "")
   | Term_una (op, t1) -> (match op with
-                            STAR -> "{" ^ (discomp_ter t1) ^ "}"
+                            STAR -> (match t1 with
+                                       Term_ent (NIL, _, _, _) -> "{}"
+                                     | _ -> "{" ^ (discomp_ter t1) ^ "}" )
                           | CROSS -> "[" ^ (discomp_ter t1) ^ "]"
                           | STROK -> "<" ^ (discomp_ter t1) ^ ">"
-                          | _ -> "(UNKNOWN-EXPR with " ^ (discomp_ter t1) ^ ")" )
+                          | OPT -> (match t1 with
+                                      Term_ent (NIL, _, _, _) -> "*"
+                                    | _ -> (discomp_ter t1) ^ "?" )
+                          | LEFT -> (discomp_ter t1) ^ "<-"
+                          | RIGHT -> (discomp_ter t1) ^ "->"
+                          | _ -> raise (Illegal_ter_detected (ter, __LINE__, __FILE__))
+                         )
+  | Term_bin (STAR, th, ts) -> "{" ^ (tail_cat0 ter) ^ "}"
+  | Term_bin (CROSS, th, ts) -> "{" ^ (tail_cat1 ter) ^ "}"
+  | Term_bin (STROK, th, ts) -> "{" ^ (tail_dup ter) ^ "}"
   | Term_bin (WEDGE, tl, tr) -> (match tl with
                                    Term_ent (ENT, id1, sp1, ad1) ->
                                     (match tr with
-                                       Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                       Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
                                      | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
                                      | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " & (" ^ (discomp_ter tr) ^ "))"
-                                     | _ -> "(" ^ (discomp_ter tl) ^ " & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                     | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                  | Term_una (_, tl1) ->
                                     (match tr with
-                                       Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
+                                       Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
                                      | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " & " ^ (discomp_ter tr) ^ ")"
                                      | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " & (" ^ (discomp_ter tr) ^ "))"
-                                     | _ -> "(" ^ (discomp_ter tl) ^ " & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                     | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                  | Term_bin (_, tll, tlr) ->
                                     (match tr with
-                                       Term_ent (ENT, id2, sp2, ad2) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
+                                       Term_ent (ENT, _, _, _) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
                                      | Term_una (_, t21) -> "((" ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
                                      | Term_bin (_, trl, trr) -> "((" ^ (discomp_ter tl) ^ ") & (" ^ (discomp_ter tr) ^ "))"
-                                     | _ ->  "((" ^ (discomp_ter tl) ^ ") & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
-                                 | _ ->
-                                    (match tr with
-                                       Term_ent (ENT, id2, sp2, ad2) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
-                                     | Term_una (op2, t21) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & " ^ (discomp_ter tr) ^ ")"
-                                     | Term_bin (_, trl, trr) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & (" ^ (discomp_ter tr) ^ "))"
-                                     | _ ->  "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") & (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                     | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
+                                 | _ -> raise (Illegal_ter_detected (tl, __LINE__, __FILE__))
                                 )
   | Term_bin (VEE, tl, tr) -> (match tl with
                                  Term_ent (ENT, id1, sp1, ad1) ->
                                   (match tr with
-                                     Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                     Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
                                    | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
                                    | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " | (" ^ (discomp_ter tr) ^ "))"
-                                   | _ -> "(" ^ (discomp_ter tl) ^ " | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                   | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                | Term_una (_, tl1) ->
                                   (match tr with
-                                     Term_ent (ENT, id2, sp2, ad2) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
+                                     Term_ent (ENT, _, _, _) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
                                    | Term_una (_, t21) -> "(" ^ (discomp_ter tl) ^ " | " ^ (discomp_ter tr) ^ ")"
                                    | Term_bin (_, trl, trr) -> "(" ^ (discomp_ter tl) ^ " | (" ^ (discomp_ter tr) ^ "))"
-                                   | _ -> "(" ^ (discomp_ter tl) ^ " | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                   | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
                                | Term_bin (_, tll, tlr) ->
                                   (match tr with
-                                     Term_ent (ENT, id2, sp2, ad2) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
+                                     Term_ent (ENT, _, _, _) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
                                    | Term_una (_, t21) -> "((" ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
                                    | Term_bin (_, trl, trr) -> "((" ^ (discomp_ter tl) ^ ") | (" ^ (discomp_ter tr) ^ "))"
-                                   | _ ->  "((" ^ (discomp_ter tl) ^ ") | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
-                               | _ ->
-                                  (match tr with
-                                     Term_ent (ENT, id2, sp2, ad2) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
-                                   | Term_una (op2, t21) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | " ^ (discomp_ter tr) ^ ")"
-                                   | Term_bin (_, trl, trr) -> "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | (" ^ (discomp_ter tr) ^ "))"
-                                   | _ ->  "(" ^ "(UNKNOWN-EXPR with " ^ (discomp_ter tl) ^ ") | (UNKNOWN-EXPR with " ^ (discomp_ter tr) ^ "))" )
+                                   | _ -> raise (Illegal_ter_detected (tr, __LINE__, __FILE__)) )
+                               | _ -> raise (Illegal_ter_detected (tl, __LINE__, __FILE__))
                               )
-  | _ -> "(UNKNOWN-EXPR with UNKNOWN-TERM)";;
+  | _ -> raise (Illegal_ter_detected (ter, __LINE__, __FILE__));;
 
 
-let pretty_t ter =
-  match ter with
-    None -> None
-  | Some ter' -> Some (discomp_ter ter');;
+let term judgement =
+  match judgement with
+    Some {ter = t} -> discomp_ter t
+  | None -> "";;
+
+
+let cterm judgement =
+  match (canon judgement) with
+    Some c_t -> discomp_ter c_t
+  | None -> "";;
+

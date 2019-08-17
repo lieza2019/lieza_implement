@@ -46,6 +46,7 @@ type binding =
 exception Illegal_pat_detected of term * pattern * int * string;;
 exception Illformed_bindings_detected of term * pattern * int * string;;
 exception Illformed_equterm_detected of term * pattern * int * string;;
+exception Illegal_ter_detected of term * int * string;;
 
 
 
