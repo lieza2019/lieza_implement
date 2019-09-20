@@ -7,6 +7,7 @@ type assoc_dir =
   | R2L;;
 
 
+(* Brings next equivalent term over associativity on cascade connectivity. *)
 let rec equiv_assoc_cas (t, dir) =
   match t with
     Term_ent (op, id, sp, ad) -> (None, dir)
@@ -149,7 +150,7 @@ let rec equiv_terms (t_orig, t_resume, assoc_dir) ena_bumpup =
     let equ_ph3 = (gath_equ_ph3 equ_ph2) in
     let equ_ph4 = if ena_bumpup then (gath_equ_ph4 equ_ph2) else equ_ph2
     in
-    (set_union equ_ph2 (set_union equ_ph3 equ_ph4))
+    (set_union term_ident equ_ph2 (set_union term_ident equ_ph3 equ_ph4))
   in    
   match t_resume with
     None -> (Some t_orig, (derive t_orig), L2R)
@@ -268,7 +269,7 @@ and gath_equ_ph4 equivs =
                              Term_bin (VEE, _, Term_una( OPT, Term_ent (NIL, "", "", ad) )) -> [e]
                            | _ -> [Term_bin (VEE, e, Term_una( OPT, Term_ent (NIL, "", "", (max_addr_term e) + 1) ))])
      in
-     set_union bumped_ones (gath_equ_ph4 es);;
+     set_union term_ident bumped_ones (gath_equ_ph4 es);;
 
 
 

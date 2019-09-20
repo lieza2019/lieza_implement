@@ -93,17 +93,17 @@ let rec set_sub s1 s2 =
   match s1 with
     [] -> s2
   | (x::xs) -> set_sub xs (rid x [] s2)
-                
-  
-let rec set_union s1 s2 =
+
+
+let rec set_union det s1 s2 =
   let add t tl =
     let rec exists t tl =
       match tl with
         [] -> false
-      | x::xs -> if (term_ident x t) then true else (exists t xs)
+      | x::xs -> if (det x t) then true else (exists t xs)
     in
     if (exists t tl) then tl else (t::tl)
   in
   match s1 with
     [] -> s2
-  | x::xs -> set_union xs (add x s2);;
+  | x::xs -> set_union det xs (add x s2);;
