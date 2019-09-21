@@ -5,32 +5,6 @@ open Lie_equiv
 
 
 
-exception Illegal_pat_detected_1 of pattern * int * string;;
-
-let rec first pat =
-  let rec has_nil fir_cands =
-    match fir_cands with
-      [] -> false
-    | (x::xs) -> if (pat_ident x (Pat_ent (NIL, "", -1))) then true else (has_nil xs)
-  in
-  match pat with
-    Pat_ent (ENT, id, ad) -> [pat]
-  | Pat_bin (WEDGE, p_1, p_2, ad) -> let fir_1 = (first p_1) in
-                                     if not (has_nil fir_1) then fir_1
-                                     else set_union pat_ident fir_1 (first p_2)
-  | Pat_bin (VEE, p_1, p_2, ad) -> let fir_1 = (first p_1) in
-                                     if not (has_nil fir_1) then fir_1
-                                     else set_union pat_ident fir_1 (first p_2)
-  | Pat_una (STAR, p_1, ad) -> set_union pat_ident (first p_1) [Pat_ent (NIL, "", -1)]
-  | Pat_una (CROSS, p_1, ad) -> first p_1
-  | Pat_una (STROK, p_1, ad) -> first p_1
-  | Pat_una (OPT, p_1, ad) -> first p_1
-  | Pat_bin (ALT, p_L, p_R, ad) -> set_union pat_ident (first p_L) (first p_R)
-  | _ -> raise (Illegal_pat_detected_1 (pat, __LINE__, __FILE__));;
-
-
-
-
 let binds_union bindings1 bindings2 =
   match bindings1 with
     []-> (match bindings2 with
@@ -73,6 +47,50 @@ let rec is_nil t =
   | _ -> None;;
 
 
+
+
+let first pat =
+  let rec sort prefixes =
+    let gte p_1 p_2 = ((pat_size p_1) >= (pat_size p_2))
+    in
+    let rec max pl =
+      match pl with
+        [] -> None
+      | p::[] -> Some (p, [])
+      | p::ps -> match (max ps) with
+                   Some (m, ps') -> if (gte p m) then Some (p, ps)
+                                    else Some (m, p :: ps')
+                 | None -> Some (p, [])
+    in
+    match prefixes with
+      [] -> []
+    | p::ps -> match (max ps) with
+                  Some (m, ps') -> if (gte p m) then p :: (sort ps)
+                                   else m :: sort (p :: ps')
+                | None -> [p]
+  in
+  let rec has_nil fir_cands =
+    match fir_cands with
+      [] -> false
+    | (x::xs) -> if (pat_ident x (Pat_ent (NIL, "", -1))) then true else (has_nil xs)
+  in
+  let rec gath_prefix p =
+    match pat with
+      Pat_ent (ENT, id, ad) -> [pat]
+    | Pat_bin (WEDGE, p_1, p_2, ad) -> let fir_1 = (gath_prefix p_1) in
+                                       if not (has_nil fir_1) then fir_1
+                                       else set_union pat_ident fir_1 (gath_prefix p_2)
+    | Pat_bin (VEE, p_1, p_2, ad) -> let fir_1 = (gath_prefix p_1) in
+                                     if not (has_nil fir_1) then fir_1
+                                     else set_union pat_ident fir_1 (gath_prefix p_2)
+    | Pat_una (STAR, p_1, ad) -> set_union pat_ident (gath_prefix p_1) [Pat_ent (NIL, "", -1)]
+    | Pat_una (CROSS, p_1, ad) -> gath_prefix p_1
+    | Pat_una (STROK, p_1, ad) -> gath_prefix p_1
+    | Pat_una (OPT, p_1, ad) -> gath_prefix p_1
+    | Pat_bin (ALT, p_L, p_R, ad) -> set_union pat_ident (gath_prefix p_L) (gath_prefix p_R)
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+  in
+  sort (gath_prefix pat);;
 
 
 (* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
@@ -135,7 +153,7 @@ let rec tourbillon ter pat =
   | Pat_bin (ALT, p_L, p_R, ad) -> (match (t_Alt_impl ter pat) with
                                       None -> None
                                     | Some judge_matched -> Some judge_matched)
-  | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
+  | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
 
 
 and t_Atom0_impl ter pat =
@@ -145,7 +163,7 @@ and t_Atom0_impl ter pat =
        (match t with   
           Term_ent (ENT, t_id, t_sp, t_ad) -> if (t_id = p_id) then Some t else None
         | _ -> None)
-    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
   and match_atomic tl pat =
     match tl with
       [] -> None
@@ -182,7 +200,7 @@ and t_Cas_impl ter pat =
            )
         | _ -> None
        )
-    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
   and match_cat tl pat =
     match tl with
       [] -> None
@@ -218,7 +236,7 @@ and t_Par_impl ter pat =
            )
         | _ -> None
        )
-    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
   and match_par tl pat =
     match tl with
       [] -> None
@@ -437,7 +455,7 @@ and t_Alt_impl ter pat =
                    | None -> None
                   )
        )
-    | _ -> raise (Illegal_pat_detected (ter, pat, __LINE__, __FILE__))
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
   and match_alt tl pat =
     match tl with
       [] -> None

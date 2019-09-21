@@ -43,12 +43,49 @@ type binding =
 
 
 
-exception Illegal_pat_detected of term * pattern * int * string;;
+exception Illegal_pat_detected of pattern * int * string;;
 exception Illformed_bindings_detected of term * pattern * int * string;;
 exception Illformed_equterm_detected of term * pattern * int * string;;
 exception Illegal_ter_detected of term * int * string;;
 
 
+
+let rec term_size t =
+  match t with
+    Term_ent (NIL, "", sp, ad) -> 0
+  | Term_ent (ENT, id, sp, ad) -> 1
+  | Term_una (STAR, t_1) ->(term_size t_1) + 1
+  | Term_bin (STAR, t_h, t_tl) -> (match t_tl with
+                                     Term_bin (STAR, _, _) -> (term_size t_h) + (term_size t_tl)
+                                   | _ -> (term_size t_h) + (term_size t_tl) + 1 )
+  | Term_una (CROSS, t_1) ->(term_size t_1) + 1
+  | Term_bin (CROSS, t_h, t_tl) -> (match t_tl with
+                                      Term_bin (CROSS, _, _) -> (term_size t_h) + (term_size t_tl)
+                                    | _ -> (term_size t_h) + (term_size t_tl) + 1 )
+  | Term_una (STROK, t_1) ->(term_size t_1) + 1
+  | Term_bin (STROK, t_h, t_tl) -> (match t_tl with
+                                      Term_bin (STROK, _, _) -> (term_size t_h) + (term_size t_tl)
+                                    | _ -> (term_size t_h) + (term_size t_tl) + 1 )
+  | Term_una (OPT, t_1) -> (term_size t_1) + 1
+  | Term_una (LEFT, t_1) -> (term_size t_1) + 1
+  | Term_una (RIGHT, t_1) -> (term_size t_1) + 1
+  | Term_bin (WEDGE, t_1, t_2) -> (term_size t_1) + (term_size t_2) + 1
+  | Term_bin (VEE, t_1, t_2) -> (term_size t_1) + (term_size t_2) + 1
+  | _ -> raise (Illegal_ter_detected (t, __LINE__, __FILE__));;
+
+
+let rec pat_size p =
+  match p with
+  | Pat_ent (NIL, "", ad) -> 0
+  | Pat_ent (ENT, id, ad) -> 1
+  | Pat_bin (WEDGE, p_1, p_2, ad) -> (pat_size p_1) + (pat_size p_2) + 1
+  | Pat_bin (VEE, p_1, p_2, ad) -> (pat_size p_1) + (pat_size p_2) + 1
+  | Pat_una (STAR, p_1, ad) -> (pat_size p_1) + 1
+  | Pat_una (CROSS, p_1, ad) -> (pat_size p_1) + 1
+  | Pat_una (STROK, p_1, ad) -> (pat_size p_1) + 1
+  | Pat_una (OPT, p_1, ad) -> (pat_size p_1) + 1
+  | Pat_bin (ALT, p_L, p_R, ad) -> (pat_size p_L) + (pat_size p_R) + 1
+  | _ -> raise (Illegal_pat_detected (p, __LINE__, __FILE__));;
 
 
 let rec set_nelems tl =

@@ -154,7 +154,7 @@ let rec resolv pat judgement =
                             (match bindings' with
                                (b_alt::[]) -> resolv pat (Some b_alt)
                              | _ -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
-                         | _ -> raise (Illegal_pat_detected (t, p, __LINE__, __FILE__))
+                         | _ -> raise (Illegal_pat_detected (p, __LINE__, __FILE__))
                         );;
 
 
@@ -204,7 +204,7 @@ let rec canonicalize judgement =
                    | Pat_una (OPT, p1, ad) -> (match (lkup_bindings t_e bindings') with
                                                  Some b -> Term_una (OPT, (canonicalize b))
                                                | None -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
-                   | _ -> raise (Illegal_pat_detected (t, p, __LINE__, __FILE__))
+                   | _ -> raise (Illegal_pat_detected (p, __LINE__, __FILE__))
                   )
      | FIN_INFTY -> (match p with
                        Pat_una (STAR, p1, ad) ->
@@ -247,7 +247,7 @@ let rec canonicalize judgement =
                              | None -> raise (Illformed_bindings_detected (t, p, __LINE__, __FILE__)) )
                          | _ -> raise (Illformed_equterm_detected (t_e, p, __LINE__, __FILE__))
                         )
-                     | _ -> raise (Illegal_pat_detected (t, p, __LINE__, __FILE__))
+                     | _ -> raise (Illegal_pat_detected (p, __LINE__, __FILE__))
                     )
      | FIN_L -> (match (lkup_bindings t_e bindings') with
                    Some b -> Term_una (LEFT, (canonicalize b))
