@@ -50,70 +50,33 @@ let rec is_nil t =
 
 
 let first pat =
-  let rec sort prefixes =
-    let gte p_1 p_2 = ((pat_size p_1) >= (pat_size p_2))
-    in
-    let rec max pl =
-      match pl with
-        [] -> None
-      | p::[] -> Some (p, [])
-      | p::ps -> match (max ps) with
-                   Some (m, ps') -> if (gte p m) then Some (p, ps)
-                                    else Some (m, p :: ps')
-                 | None -> Some (p, [])
-    in
-    match prefixes with
-      [] -> []
-    | p::ps -> match (max ps) with
-                 Some (m, ps') -> if (gte p m) then p :: (sort ps)
-                                  else m :: sort (p :: ps')
-               | None -> [p]
-  in
-  let rec has_nil fir_cands =
-    match fir_cands with
-      [] -> false
-    | x::xs -> if (pat_ident x (Pat_ent (NIL, "", -1))) then true else (has_nil xs)
-  in
-  let rec gath_prefix p = 
-    let rec coupling cands_1 cands_2 ope =
-      match cands_1 with
-        [] -> []
-      | c::cs -> (if (pat_ident c (Pat_ent (NIL, "", -1))) then []
-                  else (coupling_lst c cands_2 ope) ) @ (coupling cs cands_2 ope)
-    and coupling_lst c_1 cands_2 ope =
-      match cands_2 with
-        [] -> []
-      | c_2::c_2s -> (if (pat_ident c_2 (Pat_ent (NIL, "", -1))) then []
-                      else [Pat_bin(ope, c_1, c_2, -1)] ) @ (coupling_lst c_1 c_2s ope)
+  let rec gath_prefix p =
+    let is_nil prefix = pat_ident prefix (Pat_ent (NIL, "", -1))
     in
     match p with
-      Pat_ent (ENT, id, ad) -> [p]
+      Pat_ent (ENT, id, ad) -> p
     | Pat_bin (WEDGE, p_1, p_2, ad) -> let fir_1 = (gath_prefix p_1) in
                                        let fir_2 = (gath_prefix p_2) in
-                                       let fir_3 =(coupling fir_1 fir_2 WEDGE) in                                         
-                                       set_union pat_ident fir_3 (if not (has_nil fir_1) then
-                                                                    if not (has_nil fir_2) then []
-                                                                    else fir_1
-                                                                  else
-                                                                    if not (has_nil fir_2) then fir_2
-                                                                    else (set_union pat_ident fir_1 fir_2) )
+                                       if (is_nil fir_1) then
+                                         if (is_nil fir_2) then Pat_ent (NIL, "", -1) else fir_2
+                                       else
+                                         if (is_nil fir_2) then fir_1 else Pat_bin (WEDGE, fir_1, fir_2, -1)
     | Pat_bin (VEE, p_1, p_2, ad) -> let fir_1 = (gath_prefix p_1) in
                                      let fir_2 = (gath_prefix p_2) in
-                                     let fir_3 =(coupling fir_1 fir_2 VEE) in
-                                     set_union pat_ident fir_3 (if not (has_nil fir_1) then
-                                                                  if not (has_nil fir_2) then []
-                                                                  else fir_1
-                                                                else
-                                                                  if not (has_nil fir_2) then fir_2
-                                                                  else (set_union pat_ident fir_1 fir_2) )
-    | Pat_una (STAR, p_1, ad) -> set_union pat_ident (gath_prefix p_1) [Pat_ent (NIL, "", -1)]
+                                     if (is_nil fir_1) then
+                                       if (is_nil fir_2) then Pat_ent (NIL, "", -1) else fir_2
+                                     else
+                                       if (is_nil fir_2) then fir_1 else Pat_bin (VEE, fir_1, fir_2, -1)
+    | Pat_una (STAR, p_1, ad) -> Pat_ent (NIL, "", -1)
     | Pat_una (CROSS, p_1, ad) -> gath_prefix p_1
     | Pat_una (STROK, p_1, ad) -> gath_prefix p_1
-    | Pat_una (OPT, p_1, ad) -> set_union pat_ident (gath_prefix p_1) [Pat_ent (NIL, "", -1)]
-    | Pat_bin (ALT, p_L, p_R, ad) -> set_union pat_ident (gath_prefix p_L) (gath_prefix p_R)
+    | Pat_una (OPT, p_1, ad) -> Pat_ent (NIL, "", -1)
+    | Pat_bin (ALT, p_L, p_R, ad) -> let fir_L = (gath_prefix p_L) in
+                                     let fir_R = (gath_prefix p_R) in
+                                     if (pat_size fir_L) >= (pat_size fir_R) then fir_L else fir_R
     | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
   in
-  sort (set_union pat_ident (gath_prefix pat) [Pat_ent (NIL, "", -1)]);;
+  gath_prefix pat;;
 
 
 (* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
@@ -139,9 +102,7 @@ let boost cmp (ter_orig, ena_bumpup) pat =
                  Some bindings -> Some bindings
                | None -> revolver ter_orig ps
   in
-  (* revolver ter_orig (first pat) *)
-  revolver ter_orig [Pat_ent (NIL, "", -1)];;
-
+  revolver ter_orig (set_union pat_ident [(first pat)] [Pat_ent (NIL, "", -1)]);;
 
 
 
