@@ -5,6 +5,41 @@ open Lie_equiv
 
 
 
+let rec idx_lkup pat idx =
+  let addr pat =
+    match pat with
+      Pat_ent (_, _, ad) -> ad
+    | Pat_una (_, _, ad) -> ad
+    | Pat_bin (_, _, _, ad) -> ad
+  in
+  match idx with
+    [] -> -1
+  | i::is -> match i with
+               (ad, prefix_size) -> if (ad = (addr pat)) then prefix_size 
+                                    else (idx_lkup pat is);;
+
+
+(* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
+   and tries to infer with given rule "cmp" for each equivalents. *)
+let boost cmp (ter_orig, ena_bumpup) pat idx =
+  let oracle purity t =
+    if purity then ((term_size t) >= (idx_lkup pat idx)) else true
+  in
+  let rec revolver (ter_orig, ter_crnt, assoc_dir) purity =
+    let perf = (oracle purity) in
+    let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup)
+    in
+    match equivs with
+      (None, _, _) -> None
+    | (Some ter', e_ts, dir) -> match (cmp perf e_ts pat) with
+                                  Some found -> Some found;
+                                | None -> revolver (ter_orig, (Some ter'), dir) purity
+  in
+  match (revolver (ter_orig, None, L2R) true) with
+    Some bindings -> Some bindings
+  | None -> None;;
+
+
 let binds_union bindings1 bindings2 =
   match bindings1 with
     []-> (match bindings2 with
@@ -47,6 +82,389 @@ let rec is_nil t =
   | _ -> None;;
 
 
+(* matching engine core, ITS THE COMPLEX OF WISDOM. *)
+let rec tourbillon ter pat idx =
+  (* Decides the rule to be applied for inference according to syntax of given pattern. *)
+  match pat with
+    (* for the case of "t_Atom0_impl" *)
+    Pat_ent (ENT, id, ad) -> (match (t_Atom0_impl ter pat idx) with
+                                None -> None
+                              | Some judge_matched -> Some judge_matched)
+  (* for the case of "t_Cas_impl" *)
+  | Pat_bin (WEDGE, p_1, p_2, ad) -> (match (t_Cas_impl ter pat idx) with
+                                        None -> None
+                                      | Some judge_matched -> Some judge_matched)
+  (* for the case of "t_Par_impl" *)
+  | Pat_bin (VEE, p_1, p_2, ad) -> (match (t_Par_impl ter pat idx) with
+                                      None -> None
+                                    | Some judge_matched -> Some judge_matched)
+  (* for the case of "t_Cat0_impl_nil" *)
+  | Pat_una (STAR, p_1, ad) -> (match (t_Cat0_impl_nil ter pat idx) with
+                                  Some judge_matched -> Some judge_matched
+                                | None -> (match (t_Cat0_impl_sol ter p_1 idx) with
+                                             Some judge_matched -> Some judge_matched
+                                           |  None -> (match (t_Cat0_impl_infty ter p_1 idx) with
+                                                         None -> None
+                                                       | Some judge_matched -> Some judge_matched) ) )
+  (* for the case of "t_Cat1_impl_sol" *)
+  | Pat_una (CROSS, p_1, ad) -> (match (t_Cat1_impl_sol ter p_1 idx) with
+                                   Some judge_matched -> Some judge_matched
+                                 |  None -> (match (t_Cat1_impl_infty ter p_1 idx) with
+                                               None -> None
+                                             | Some judge_matched -> Some judge_matched) )
+  (* for the case of "t_Dup_impl_sol" *)
+  | Pat_una (STROK, p_1, ad) -> (match (t_Dup_impl_sol ter p_1 idx) with
+                                   Some judge_matched -> Some judge_matched
+                                 |  None -> (match (t_Dup_impl_infty ter p_1 idx) with
+                                               None -> None
+                                             | Some judge_matched -> Some judge_matched) )
+  (* for the case of "t_Opt_xtend_nil" *)
+  | Pat_una (OPT, p_1, ad) -> (match (t_Opt_xtend_nil ter pat idx) with
+                                 Some judge_matched -> Some judge_matched
+                               | None -> (match (t_Opt_impl_sol ter p_1 idx) with
+                                            None -> None
+                                          | Some judge_matched -> Some judge_matched) )
+  (* for the case of "t_Alt_impl" *)
+  | Pat_bin (ALT, p_L, p_R, ad) -> (match (t_Alt_impl ter pat idx) with
+                                      None -> None
+                                    | Some judge_matched -> Some judge_matched)
+  | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+
+
+and t_Atom0_impl ter pat idx =
+  let rec cmp_atomic t pat =
+    match pat with
+      Pat_ent (ENT, p_id, p_ad) ->
+       (match t with   
+          Term_ent (ENT, t_id, t_sp, t_ad) -> if (t_id = p_id) then Some t else None
+        | _ -> None)
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+  and match_atomic perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_atomic x pat) with
+                     Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
+                   | None -> match_atomic perf xs pat
+                 else (match_atomic perf xs pat)
+  in
+  boost match_atomic (ter, false) pat idx
+
+
+and t_Cas_impl ter pat idx =
+  let rec cmp_cat t pat =
+    match pat with
+      Pat_bin (WEDGE, p_1, p_2, ad) ->
+       (match t with
+          Term_bin (WEDGE, t_l, t_r) ->
+           let r_1st = (tourbillon t_l p_1 idx)
+           in
+           (match r_1st with
+            | None -> None
+            | Some b_1st -> let r_2nd = (tourbillon t_r p_2 idx)
+                            in
+                            (match r_2nd with
+                             | None -> None
+                             | Some b_2nd ->
+                                let bindings' = (binds_union [b_1st] [b_2nd])
+                                in
+                                (match bindings' with
+                                   [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
+                                 | b -> let e = Term_bin (WEDGE, b_1st.ter, b_2nd.ter) in
+                                        Some {ter = ter; equ = e; pat = pat; fin = FIN_WEDGE; bindings = b} )
+                            )
+           )
+        | _ -> None
+       )
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+  and match_cat perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_cat x pat) with
+                     Some found -> Some found
+                   | None -> match_cat perf xs pat
+                 else (match_cat perf xs pat)
+  in
+  boost match_cat (ter, true) pat idx
+
+
+and t_Par_impl ter pat idx =
+  let rec cmp_par t pat =
+    match pat with
+      Pat_bin (VEE, p_1, p_2, ad) ->
+       (match t with
+          Term_bin (VEE, t_l, t_r) ->
+           let r_1st = (tourbillon t_l p_1 idx)
+           in
+           (match r_1st with
+            | None -> None
+            | Some b_1st -> let r_2nd = (tourbillon t_r p_2 idx)
+                            in
+                            (match r_2nd with
+                             | None -> None
+                             | Some b_2nd ->
+                                let bindings' = (binds_union [b_1st] [b_2nd])
+                                in
+                                (match bindings' with
+                                   [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
+                                 | b -> let e = Term_bin (VEE, b_1st.ter, b_2nd.ter) in
+                                        Some {ter = ter; equ = e; pat = pat; fin = FIN_VEE; bindings = b} )
+                            )
+           )
+        | _ -> None
+       )
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+  and match_par perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_par x pat) with
+                     Some found -> Some found
+                   | None -> match_par perf xs pat
+                 else (match_par perf xs pat)
+  in
+  boost match_par (ter, true) pat idx
+
+
+and t_Cat0_impl_nil ter pat idx =
+  match (is_nil ter) with
+    None -> None
+  | Some v ->
+     let v' = (match v with
+                 Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> v
+               | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> Term_una ( STAR, Term_ent (NIL, id, sp, ad) )
+               | _ -> raise (Illformed_equterm_detected (v, pat, __LINE__, __FILE__)) )
+     in
+     Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
+
+
+and t_Cat0_impl_sol ter pat idx =
+  let rec match_sol perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) ->
+       if (perf x) then
+         match (tourbillon x pat idx) with
+           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+         | None -> match_sol perf xs pat
+       else (match_sol perf xs pat)
+  in
+  boost match_sol (ter, true) pat idx
+
+
+and t_Cat0_impl_infty ter pat idx =
+  let disbumping ter =
+    match ter with
+      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
+       (match t_t with
+          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
+        | _ -> None)
+    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
+    | _ -> None
+  in
+  let rec cmp_cat0 t pat =
+    match (disbumping t) with
+      Some (t_h, t_t) ->
+       let r_h = (tourbillon t_h pat idx)
+       in
+       (match r_h with
+        | None -> None
+        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (STAR, pat, -1)) idx)
+                      in
+                      (match r_t with
+                       | None -> None
+                       | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
+                                     in
+                                     (match bindings' with
+                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
+                                      | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
+                                             in
+                                             Some {ter = ter; equ = e; pat = Pat_una (STAR, pat, -1); fin = FIN_INFTY; bindings = b} )
+                      )
+       )
+    | _ -> None
+  and match_cat0 perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_cat0 x pat) with
+                     Some found -> Some found
+                   | None -> match_cat0 perf xs pat
+                 else (match_cat0 perf xs pat)
+  in
+  boost match_cat0 (ter, true) pat idx
+
+
+and t_Cat1_impl_sol ter pat idx =
+  let rec match_sol perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) ->
+       if (perf x) then
+         match (tourbillon x pat idx) with
+           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+         | None -> match_sol perf xs pat
+       else (match_sol perf xs pat)
+  in
+  boost match_sol (ter, true) pat idx
+
+
+and t_Cat1_impl_infty ter pat idx =
+  let disbumping ter =
+    match ter with
+      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
+       (match t_t with
+          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
+        | _ -> None)
+    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
+    | _ -> None
+  in
+  let rec cmp_cat1 t pat =
+    match (disbumping t) with
+      Some (t_h, t_t) ->
+       let r_h = (tourbillon t_h pat idx)
+       in
+       (match r_h with
+        | None -> None
+        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (CROSS, pat, -1)) idx)
+                      in
+                      (match r_t with
+                       | None -> None
+                       | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
+                                     in
+                                     (match bindings' with
+                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
+                                      | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
+                                             in
+                                             Some {ter = ter; equ = e; pat = Pat_una (CROSS, pat, -1); fin = FIN_INFTY; bindings = b}
+                                     )
+                      )
+       )
+    | _ -> None
+  and match_cat1 perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_cat1 x pat) with
+                     Some found -> Some found
+                   | None -> match_cat1 perf xs pat
+                 else (match_cat1 perf xs pat)
+  in
+  boost match_cat1 (ter, true) pat idx
+
+
+and t_Dup_impl_sol ter pat idx =
+  let rec match_sol perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) ->
+       if (perf x) then
+         match (tourbillon x pat idx) with
+           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+         | None -> match_sol perf xs pat
+       else (match_sol perf xs pat)
+  in
+  boost match_sol (ter, true) pat idx
+
+
+and t_Dup_impl_infty ter pat idx =
+  let disbumping ter =
+    match ter with
+      Term_bin (VEE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
+       (match t_t with
+          Term_bin (VEE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
+        | _ -> None)
+    | Term_bin (VEE, t_h, t_t) -> Some (t_h, t_t)
+    | _ -> None
+  in
+  let rec cmp_dup t pat =
+    match (disbumping t) with
+      Some (t_h, t_t) ->
+       let r_h = (tourbillon t_h pat idx)
+       in
+       (match r_h with
+        | None -> None
+        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (STROK, pat, -1)) idx)
+                      in
+                      (match r_t with
+                       | None -> None
+                       | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
+                                     in
+                                     (match bindings' with
+                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
+                                      | b -> let e = Term_bin (VEE, b_h.ter, b_t.equ)
+                                             in
+                                             Some {ter = ter; equ = e; pat = Pat_una (STROK, pat, -1); fin = FIN_INFTY; bindings = b}
+                                     )
+                      )
+       )
+    | _ -> None
+  and match_dup perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_dup x pat) with
+                     Some found -> Some found
+                   | None -> match_dup perf xs pat
+                 else (match_dup perf xs pat)
+  in
+  boost match_dup (ter, true) pat idx
+
+
+and t_Opt_xtend_nil ter pat idx =
+  match (is_nil ter) with
+    None -> None
+  | Some v -> let v' = (match v with
+                        | Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> Term_una ( OPT, Term_ent (NIL, id, sp, ad) )
+                        | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> v
+                        | _ -> raise (Illformed_equterm_detected (v, pat, __LINE__, __FILE__)) )
+              in
+              Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
+
+
+and t_Opt_impl_sol ter pat idx =
+  let rec match_sol perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) ->
+       if (perf x) then
+         match (tourbillon x pat idx) with
+           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+         | None -> match_sol perf xs pat
+       else (match_sol perf xs pat)
+  in
+  boost match_sol (ter, true) pat idx
+
+
+and t_Alt_impl ter pat idx =
+  let rec cmp_alt t pat =
+    match pat with
+      Pat_bin (ALT, p_L, p_R, ad) ->
+       let r_L = (tourbillon t p_L idx)
+       in
+       (match r_L with
+          Some b_L -> Some {ter = ter; equ = b_L.ter; pat = pat; fin = FIN_L; bindings = [b_L]}
+        | None -> let r_R = (tourbillon t p_R idx)
+                  in
+                  (match r_R with
+                   | Some b_R -> Some {ter = t; equ = b_R.ter; pat = pat; fin = FIN_R; bindings = [b_R]}
+                   | None -> None
+                  )
+       )
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+  and match_alt perf tl pat =
+    match tl with
+      [] -> None
+    | (x::xs) -> if (perf x) then
+                   match (cmp_alt x pat) with
+                     Some found -> Some found
+                   | None -> match_alt perf xs pat
+                 else (match_alt perf xs pat)
+  in
+  boost match_alt (ter, true) pat idx;;
+
+
 
 
 let first pat =
@@ -79,417 +497,53 @@ let first pat =
   gath_prefix pat;;
 
 
-(* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
-   and tries to infer with given rule "cmp" for each equivalents. *)
-let boost cmp (ter_orig, ena_bumpup) pat =
-  let oracle prefix t =
-    (term_size t) >= (pat_size prefix)
-  in
-  let rec revolver ter_orig prefixes =
-    let rec dispatch (ter_orig, ter_crnt, assoc_dir) prefix =
-      let perf = (oracle prefix) in
-      let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup)
-      in
-      match equivs with
-        (None, _, _) -> None
-      | (Some ter', e_ts, dir) -> match (cmp perf e_ts pat) with
-                                    Some found -> Some found;
-                                  | None -> dispatch (ter_orig, (Some ter'), dir) prefix
-    in
-    match prefixes with
-      [] -> None
-    | p::ps -> match (dispatch (ter_orig, None, L2R) p) with
-                 Some bindings -> Some bindings
-               | None -> revolver ter_orig ps
-  in
-  revolver ter_orig (set_union pat_ident [(first pat)] [Pat_ent (NIL, "", -1)]);;
-
-
-
-(* matching engine core, ITS THE COMPLEX OF WISDOM. *)
-let rec tourbillon ter pat =
-  (* Decides the rule to be applied for inference according to syntax of given pattern. *)
+let rec perf_index pat =
   match pat with
-    (* for the case of "t_Atom0_impl" *)
-    Pat_ent (ENT, id, ad) -> (match (t_Atom0_impl ter pat) with
-                                None -> None
-                              | Some judge_matched -> Some judge_matched)
-  (* for the case of "t_Cas_impl" *)
-  | Pat_bin (WEDGE, p_1, p_2, ad) -> (match (t_Cas_impl ter pat) with
-                                        None -> None
-                                      | Some judge_matched -> Some judge_matched)
-  (* for the case of "t_Par_impl" *)
-  | Pat_bin (VEE, p_1, p_2, ad) -> (match (t_Par_impl ter pat) with
-                                      None -> None
-                                    | Some judge_matched -> Some judge_matched)
-  (* for the case of "t_Cat0_impl_nil" *)
-  | Pat_una (STAR, p_1, ad) -> (match (t_Cat0_impl_nil ter pat) with
-                                  Some judge_matched -> Some judge_matched
-                                | None -> (match (t_Cat0_impl_sol ter p_1) with
-                                             Some judge_matched -> Some judge_matched
-                                           |  None -> (match (t_Cat0_impl_infty ter p_1) with
-                                                         None -> None
-                                                       | Some judge_matched -> Some judge_matched) ) )
-  (* for the case of "t_Cat1_impl_sol" *)
-  | Pat_una (CROSS, p_1, ad) -> (match (t_Cat1_impl_sol ter p_1) with
-                                   Some judge_matched -> Some judge_matched
-                                 |  None -> (match (t_Cat1_impl_infty ter p_1) with
-                                               None -> None
-                                             | Some judge_matched -> Some judge_matched) )
-  (* for the case of "t_Dup_impl_sol" *)
-  | Pat_una (STROK, p_1, ad) -> (match (t_Dup_impl_sol ter p_1) with
-                                   Some judge_matched -> Some judge_matched
-                                 |  None -> (match (t_Dup_impl_infty ter p_1) with
-                                               None -> None
-                                             | Some judge_matched -> Some judge_matched) )
-  (* for the case of "t_Opt_xtend_nil" *)
-  | Pat_una (OPT, p_1, ad) -> (match (t_Opt_xtend_nil ter pat) with
-                                 Some judge_matched -> Some judge_matched
-                               | None -> (match (t_Opt_impl_sol ter p_1) with
-                                            None -> None
-                                          | Some judge_matched -> Some judge_matched) )
-  (* for the case of "t_Alt_impl" *)
-  | Pat_bin (ALT, p_L, p_R, ad) -> (match (t_Alt_impl ter pat) with
-                                      None -> None
-                                    | Some judge_matched -> Some judge_matched)
-  | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+    Pat_ent (ENT, id, ad) -> [(ad, pat_size (first pat))]
+  | Pat_bin (WEDGE, p_1, p_2, ad) -> (perf_index p_1) @ (perf_index p_2) @ [(ad, pat_size (first pat))]
+  | Pat_bin (VEE, p_1, p_2, ad) -> (perf_index p_1) @ (perf_index p_2) @ [(ad, pat_size (first pat))]
+  | Pat_una (STAR, p_1, ad) -> (perf_index p_1) @ [(ad, pat_size (first pat))]
+  | Pat_una (CROSS, p_1, ad) -> (perf_index p_1) @ [(ad, pat_size (first pat))]
+  | Pat_una (STROK, p_1, ad) -> (perf_index p_1) @ [(ad, pat_size (first pat))]
+  | Pat_una (OPT, p_1, ad) -> (perf_index p_1) @ [(ad, pat_size (first pat))]
+  | Pat_bin (ALT, p_1, p_2, ad) -> (perf_index p_1) @ (perf_index p_2) @ [(ad, pat_size (first pat))]
+  | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__));;
 
 
-and t_Atom0_impl ter pat =
-  let rec cmp_atomic t pat =
-    match pat with
-      Pat_ent (ENT, p_id, p_ad) ->
-       (match t with   
-          Term_ent (ENT, t_id, t_sp, t_ad) -> if (t_id = p_id) then Some t else None
-        | _ -> None)
-    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_atomic perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_atomic x pat) with
-                     Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
-                   | None -> match_atomic perf xs pat
-                 else (match_atomic perf xs pat)
-  in
-  boost match_atomic (ter, false) pat
-
-
-and t_Cas_impl ter pat =
-  let rec cmp_cat t pat =
-    match pat with
-      Pat_bin (WEDGE, p_1, p_2, ad) ->
-       (match t with
-          Term_bin (WEDGE, t_l, t_r) ->
-           let r_1st = (tourbillon t_l p_1)
-           in
-           (match r_1st with
-            | None -> None
-            | Some b_1st -> let r_2nd = (tourbillon t_r p_2)
-                            in
-                            (match r_2nd with
-                             | None -> None
-                             | Some b_2nd ->
-                                let bindings' = (binds_union [b_1st] [b_2nd])
-                                in
-                                (match bindings' with
-                                   [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
-                                 | b -> let e = Term_bin (WEDGE, b_1st.ter, b_2nd.ter) in
-                                        Some {ter = ter; equ = e; pat = pat; fin = FIN_WEDGE; bindings = b} )
-                            )
-           )
-        | _ -> None
-       )
-    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_cat perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_cat x pat) with
-                     Some found -> Some found
-                   | None -> match_cat perf xs pat
-                 else (match_cat perf xs pat)
-  in
-  boost match_cat (ter, true) pat
-
-
-and t_Par_impl ter pat =
-  let rec cmp_par t pat =
-    match pat with
-      Pat_bin (VEE, p_1, p_2, ad) ->
-       (match t with
-          Term_bin (VEE, t_l, t_r) ->
-           let r_1st = (tourbillon t_l p_1)
-           in
-           (match r_1st with
-            | None -> None
-            | Some b_1st -> let r_2nd = (tourbillon t_r p_2)
-                            in
-                            (match r_2nd with
-                             | None -> None
-                             | Some b_2nd ->
-                                let bindings' = (binds_union [b_1st] [b_2nd])
-                                in
-                                (match bindings' with
-                                   [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
-                                 | b -> let e = Term_bin (VEE, b_1st.ter, b_2nd.ter) in
-                                        Some {ter = ter; equ = e; pat = pat; fin = FIN_VEE; bindings = b} )
-                            )
-           )
-        | _ -> None
-       )
-    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_par perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_par x pat) with
-                     Some found -> Some found
-                   | None -> match_par perf xs pat
-                 else (match_par perf xs pat)
-  in
-  boost match_par (ter, true) pat
-
-
-and t_Cat0_impl_nil ter pat =
-  match (is_nil ter) with
-    None -> None
-  | Some v ->
-     let v' = (match v with
-                 Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> v
-               | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> Term_una ( STAR, Term_ent (NIL, id, sp, ad) )
-               | _ -> raise (Illformed_equterm_detected (v, pat, __LINE__, __FILE__)) )
-     in
-     Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
-
-
-and t_Cat0_impl_sol ter pat =
-  let rec match_sol perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
-  in
-  boost match_sol (ter, true) pat
-
-
-and t_Cat0_impl_infty ter pat =
-  let disbumping ter =
-    match ter with
-      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
-       (match t_t with
-          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
-        | _ -> None)
-    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
-    | _ -> None
-  in
-  let rec cmp_cat0 t pat =
-    match (disbumping t) with
-      Some (t_h, t_t) ->
-       let r_h = (tourbillon t_h pat)
-       in
-       (match r_h with
-        | None -> None
-        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (STAR, pat, -1)))
-                      in
-                      (match r_t with
-                       | None -> None
-                       | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
-                                     in
-                                     (match bindings' with
-                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
-                                      | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
-                                             in
-                                             Some {ter = ter; equ = e; pat = Pat_una (STAR, pat, -1); fin = FIN_INFTY; bindings = b} )
-                      )
-       )
-    | _ -> None
-  and match_cat0 perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_cat0 x pat) with
-                     Some found -> Some found
-                   | None -> match_cat0 perf xs pat
-                 else (match_cat0 perf xs pat)
-  in
-  boost match_cat0 (ter, true) pat
-
-
-and t_Cat1_impl_sol ter pat =
-  let rec match_sol perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
-  in
-  boost match_sol (ter, true) pat
-
-
-and t_Cat1_impl_infty ter pat =
-  let disbumping ter =
-    match ter with
-      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
-       (match t_t with
-          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
-        | _ -> None)
-    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
-    | _ -> None
-  in
-  let rec cmp_cat1 t pat =
-    match (disbumping t) with
-      Some (t_h, t_t) ->
-       let r_h = (tourbillon t_h pat)
-       in
-       (match r_h with
-        | None -> None
-        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (CROSS, pat, -1)))
-                      in
-                      (match r_t with
-                       | None -> None
-                       | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
-                                     in
-                                     (match bindings' with
-                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
-                                      | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
-                                             in
-                                             Some {ter = ter; equ = e; pat = Pat_una (CROSS, pat, -1); fin = FIN_INFTY; bindings = b}
-                                     )
-                      )
-       )
-    | _ -> None
-  and match_cat1 perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_cat1 x pat) with
-                     Some found -> Some found
-                   | None -> match_cat1 perf xs pat
-                 else (match_cat1 perf xs pat)
-  in
-  boost match_cat1 (ter, true) pat
-
-
-and t_Dup_impl_sol ter pat =
-  let rec match_sol perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
-  in
-  boost match_sol (ter, true) pat
-
-
-and t_Dup_impl_infty ter pat =
-  let disbumping ter =
-    match ter with
-      Term_bin (VEE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
-       (match t_t with
-          Term_bin (VEE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
-        | _ -> None)
-    | Term_bin (VEE, t_h, t_t) -> Some (t_h, t_t)
-    | _ -> None
-  in
-  let rec cmp_dup t pat =
-    match (disbumping t) with
-      Some (t_h, t_t) ->
-       let r_h = (tourbillon t_h pat)
-       in
-       (match r_h with
-        | None -> None
-        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (STROK, pat, -1)))
-                      in
-                      (match r_t with
-                       | None -> None
-                       | Some b_t -> let bindings' = (binds_union [b_h] b_t.bindings)
-                                     in
-                                     (match bindings' with
-                                        [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
-                                      | b -> let e = Term_bin (VEE, b_h.ter, b_t.equ)
-                                             in
-                                             Some {ter = ter; equ = e; pat = Pat_una (STROK, pat, -1); fin = FIN_INFTY; bindings = b}
-                                     )
-                      )
-       )
-    | _ -> None
-  and match_dup perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_dup x pat) with
-                     Some found -> Some found
-                   | None -> match_dup perf xs pat
-                 else (match_dup perf xs pat)
-  in
-  boost match_dup (ter, true) pat
-
-
-and t_Opt_xtend_nil ter pat =
-  match (is_nil ter) with
-    None -> None
-  | Some v -> let v' = (match v with
-                        | Term_una ( STAR, Term_ent (NIL, id, sp, ad) ) -> Term_una ( OPT, Term_ent (NIL, id, sp, ad) )
-                        | Term_una ( OPT, Term_ent (NIL, id, sp, ad) ) -> v
-                        | _ -> raise (Illformed_equterm_detected (v, pat, __LINE__, __FILE__)) )
-              in
-              Some {ter = ter; equ = v'; pat = pat; fin = FIN_NIL; bindings = []}
-
-
-and t_Opt_impl_sol ter pat =
-  let rec match_sol perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
-  in
-  boost match_sol (ter, true) pat
-
-
-and t_Alt_impl ter pat =
-  let rec cmp_alt t pat =
-    match pat with
-      Pat_bin (ALT, p_L, p_R, ad) ->
-       let r_L = (tourbillon t p_L)
-       in
-       (match r_L with
-          Some b_L -> Some {ter = ter; equ = b_L.ter; pat = pat; fin = FIN_L; bindings = [b_L]}
-        | None -> let r_R = (tourbillon t p_R)
-                  in
-                  (match r_R with
-                   | Some b_R -> Some {ter = t; equ = b_R.ter; pat = pat; fin = FIN_R; bindings = [b_R]}
-                   | None -> None
-                  )
-       )
-    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_alt perf tl pat =
-    match tl with
-      [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_alt x pat) with
-                     Some found -> Some found
-                   | None -> match_alt perf xs pat
-                 else (match_alt perf xs pat)
-  in
-  boost match_alt (ter, true) pat;;
+let rec curve pat ad =
+  match pat with
+    Pat_ent (ENT, id, _) -> (Pat_ent (ENT, id, ad), ad)
+  | Pat_bin (WEDGE, p_1, p_2, _) -> let r1 = (curve p_1 ad) in
+                                    (match r1 with
+                                       (p_1', ad_1') -> let r2 = (curve p_2 (ad_1' + 1)) in
+                                                        (match r2 with
+                                                           (p_2', ad_2') -> (Pat_bin (WEDGE, p_1', p_2', (ad_2' + 1)), (ad_2' + 1)) )
+                                    )
+  | Pat_bin (VEE, p_1, p_2, _) -> let r1 = (curve p_1 ad) in
+                                    (match r1 with
+                                       (p_1', ad_1') -> let r2 = (curve p_2 (ad_1' + 1)) in
+                                                        (match r2 with
+                                                           (p_2', ad_2') -> (Pat_bin (VEE, p_1', p_2', (ad_2' + 1)), (ad_2' + 1)) )
+                                    )
+  | Pat_una (STAR, p_1, _) -> (match (curve p_1 ad) with
+                                 (p_1', ad') -> (Pat_una (STAR, p_1', (ad' + 1)), (ad' + 1)) )
+  | Pat_una (CROSS, p_1, _) -> (match (curve p_1 ad) with
+                                  (p_1', ad') -> (Pat_una (CROSS, p_1', (ad' + 1)), (ad' + 1)) )
+  | Pat_una (STROK, p_1, _) -> (match (curve p_1 ad) with
+                                  (p_1', ad') -> (Pat_una (STROK, p_1', (ad' + 1)), (ad' + 1)) )
+  | Pat_una (OPT, p_1, _) -> (match (curve p_1 ad) with
+                                (p_1', ad') -> (Pat_una (OPT, p_1', (ad' + 1)), (ad' + 1)) )
+  | Pat_bin (ALT, p_L, p_R, _) -> let rL = (curve p_L ad) in
+                                  (match rL with
+                                     (p_L', ad_L') -> let rR = (curve p_R (ad_L' + 1)) in
+                                                      (match rR with
+                                                         (p_R', ad_R') -> (Pat_bin (VEE, p_L', p_R', (ad_R' + 1)), (ad_R' + 1)) )
+                                  )
+  | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__));;
 
 
 let typematch cli =
   match cli with
     None -> None
-  | Some CLI (ter, pat) -> tourbillon ter pat;;
+  | Some CLI (ter, pat) -> match (curve pat 1) with
+                             (pat', _) -> tourbillon ter pat' (perf_index pat');;
