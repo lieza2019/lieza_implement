@@ -82,6 +82,132 @@ let rec is_nil t =
   | _ -> None;;
 
 
+<<<<<<< HEAD
+=======
+
+
+type prefix_attr =
+  | LEFTHAND_SIDE
+  | RIGHTHAND_SIDE
+  | NEUTRAL;;
+
+let first pat =
+  let prefix_ident (prefix_1, _) (prefix_2, __) = (pat_ident prefix_1 prefix_2)
+  in
+  let rec sort cands =
+    let gte p_1 p_2 = ((pat_size p_1) >= (pat_size p_2))
+    in
+    let rec max cs =
+      match cs with
+        [] -> None
+      | c::[] -> Some (c, [])
+      | c::cl -> match c with
+                   (prefix, _) -> match (max cl) with
+                                    Some ((prefix', attr'), cl')-> if (gte prefix prefix') then Some (c, cl)
+                                                                   else Some ((prefix', attr'), c::cl')
+                                  | None -> Some (c, [])
+    in
+    match cands with
+      [] -> []
+    | c::cs -> match c with
+                 (prefix, _) -> match (max cs) with
+                                  Some ((prefix', attr'), cs') -> if (gte prefix prefix') then (c :: (sort cs))
+                                                                  else ((prefix', attr') :: sort (c :: cs'))
+                                | None -> [c]
+  in
+  let rec has_nil fir_cands =
+    match fir_cands with
+      [] -> false
+    | (prefix, _)::cs -> if (pat_ident prefix (Pat_ent (NIL, "", -1))) then true else (has_nil cs)
+  in
+  let rec gath_prefix p =
+    let rec curve cands attr =
+      match cands with
+        [] -> []
+      | (prefix, _)::cs -> (prefix, attr) :: (curve cs attr)
+    in
+    let rec coupling cands_1 cands_2 ope =
+      match cands_1 with
+        [] -> []
+      | (prefix_1, _)::c_1s -> if (pat_ident prefix_1 (Pat_ent (NIL, "", -1))) then []
+                               else ((coupling_lst prefix_1 cands_2 ope) @ (coupling c_1s cands_2 ope))
+    and coupling_lst prefix_1 cands_2 ope =
+      match cands_2 with
+        [] -> []
+      | (prefix_2, _)::c_2s -> if (pat_ident prefix_2 (Pat_ent (NIL, "", -1))) then []
+                               else
+                                 [(Pat_bin(ope, prefix_1, prefix_2, -1), NEUTRAL)] @ (coupling_lst prefix_1 c_2s ope)
+    in
+    match p with
+      Pat_ent (ENT, id, ad) -> [(p, NEUTRAL)]
+    | Pat_bin (WEDGE, p_1, p_2, ad) -> let fir_1 = curve (gath_prefix p_1) LEFTHAND_SIDE in
+                                       let fir_2 = curve (gath_prefix p_2) RIGHTHAND_SIDE in
+                                       if (has_nil fir_1) then
+                                         if (has_nil fir_2) then [] else (curve fir_2 NEUTRAL)
+                                       else
+                                         if (has_nil fir_2) then (curve fir_1 NEUTRAL)
+                                         else
+                                           let fir_3 = curve (coupling fir_1 fir_2 WEDGE) NEUTRAL in
+                                           set_union prefix_ident fir_3 (set_union prefix_ident fir_1 fir_2)
+    | Pat_bin (VEE, p_1, p_2, ad) -> let fir_1 = curve (gath_prefix p_1) LEFTHAND_SIDE in
+                                     let fir_2 = curve (gath_prefix p_2) RIGHTHAND_SIDE in
+                                     if (has_nil fir_1) then
+                                       if (has_nil fir_2) then [] else (curve fir_2 NEUTRAL)
+                                     else
+                                       if (has_nil fir_2) then (curve fir_1 NEUTRAL)
+                                       else
+                                         let fir_3 = curve (coupling fir_1 fir_2 VEE) NEUTRAL in
+                                           set_union prefix_ident fir_3 (set_union prefix_ident fir_1 fir_2)
+    | Pat_una (STAR, p_1, ad) -> curve (set_union prefix_ident (gath_prefix p_1) [(Pat_ent (NIL, "", -1), NEUTRAL)]) NEUTRAL
+    | Pat_una (CROSS, p_1, ad) -> curve (gath_prefix p_1) NEUTRAL
+    | Pat_una (STROK, p_1, ad) -> curve (gath_prefix p_1) NEUTRAL
+    | Pat_una (OPT, p_1, ad) -> curve (set_union prefix_ident (gath_prefix p_1) [(Pat_ent (NIL, "", -1), NEUTRAL)]) NEUTRAL
+    | Pat_bin (ALT, p_L, p_R, ad) -> set_union prefix_ident (curve (gath_prefix p_L) NEUTRAL) (curve (gath_prefix p_R) NEUTRAL)
+    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
+  in
+  sort (set_union prefix_ident (gath_prefix pat) [(Pat_ent (NIL, "", -1), NEUTRAL)]);;
+
+
+(* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
+   and tries to infer with given rule "cmp" for each equivalents. *)
+let boost cmp (ter_orig, ena_bumpup) pat =
+  let oracle p t =
+    match p with
+      (prefix, attr)
+      -> match attr with
+           LEFTHAND_SIDE -> (match t with
+                               Term_bin (WEDGE, t_1, t_2) -> ((term_size t_1) >= (pat_size prefix))
+                             | Term_bin (VEE, t_1, t_2) -> ((term_size t_1) >= (pat_size prefix))
+                             | _ -> false )
+         | RIGHTHAND_SIDE -> (match t with
+                                Term_bin (WEDGE, t_1, t_2) -> ((term_size t_2) >= (pat_size prefix))
+                              | Term_bin (VEE, t_1, t_2) -> ((term_size t_2) >= (pat_size prefix))
+                              | _ -> false )
+         | _ -> ((term_size t) >= (pat_size prefix)) (* includes NEUTRAL case. *)
+  in
+  let rec revolver ter_orig prefixes =
+    let rec dispatch (ter_orig, ter_crnt, assoc_dir) prefix =
+      let perf = (oracle prefix) in
+      let equivs = equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup
+      in
+      match equivs with
+        (None, _, _) -> None
+      | (Some ter', e_ts, dir) -> match (cmp perf e_ts pat) with
+                                    Some found -> Some found;
+                                  | None -> dispatch (ter_orig, (Some ter'), dir) prefix
+    in
+    match prefixes with
+      [] -> None
+    | p::ps -> match (dispatch (ter_orig, None, L2R) p) with
+                 Some bindings -> Some bindings
+               | None -> revolver ter_orig ps
+  in
+  (* revolver ter_orig [(Pat_ent (NIL, "", -1), NEUTRAL)];; *)
+  revolver ter_orig (first pat);;
+
+
+
+>>>>>>> d7bb46299e665f1cf77c97dd2ef9efe87183d334
 (* matching engine core, ITS THE COMPLEX OF WISDOM. *)
 let rec tourbillon ter pat idx =
   (* Decides the rule to be applied for inference according to syntax of given pattern. *)
