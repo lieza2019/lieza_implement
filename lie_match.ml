@@ -20,17 +20,20 @@ let rec idx_lkup pat idx =
 
 (* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
    and tries to infer with given rule "cmp" for each equivalents. *)
-let rec revolver cmp (ter_orig, ter_crnt, assoc_dir, ena_bumpup) pat idx =
+let boost cmp (ter_orig, ena_bumpup) pat idx =
   let oracle p t = (term_size t) >= (idx_lkup p idx)
   in
-  if (oracle pat ter_orig) then    
-    let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup) in
-    match equivs with
-      (None, _, _) -> None
-    | (Some ter', e_ts, dir) -> match (cmp e_ts pat) with
-                                  Some found -> Some found;
-                                | None -> revolver cmp (ter_orig, (Some ter'), dir, ena_bumpup) pat idx
-  else None;;
+  let rec revolver cmp (ter_orig, ter_crnt, assoc_dir, ena_bumpup) pat =
+    if (oracle pat ter_orig) then    
+      let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup) in
+      match equivs with
+        (None, _, _) -> None
+      | (Some ter', e_ts, dir) -> match (cmp e_ts pat) with
+                                    Some found -> Some found;
+                                  | None -> revolver cmp (ter_orig, (Some ter'), dir, ena_bumpup) pat
+    else None
+  in
+  revolver cmp (ter_orig, None, L2R, ena_bumpup) pat;;
 
 
 let binds_union bindings1 bindings2 =
@@ -137,7 +140,7 @@ and t_Atom0_impl ter pat idx =
                    Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
                  | None -> match_atomic xs pat
   in
-  revolver match_atomic (ter, None, L2R, false) pat idx
+  boost match_atomic (ter, false) pat idx
 
 
 and t_Cas_impl ter pat idx =
@@ -173,7 +176,7 @@ and t_Cas_impl ter pat idx =
                    Some found -> Some found
                  | None -> match_cat xs pat
   in
-  revolver match_cat (ter, None, L2R, true) pat idx
+  boost match_cat (ter, true) pat idx
 
 
 and t_Par_impl ter pat idx =
@@ -209,7 +212,7 @@ and t_Par_impl ter pat idx =
                    Some found -> Some found
                  | None -> match_par xs pat
   in
-  revolver match_par (ter, None, L2R, true) pat idx
+  boost match_par (ter, true) pat idx
 
 
 and t_Cat0_impl_nil ter pat =
@@ -232,7 +235,7 @@ and t_Cat0_impl_sol ter pat idx =
                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                  | None -> match_sol xs pat
   in
-  revolver match_sol (ter, None, L2R, true) pat idx
+  boost match_sol (ter, true) pat idx
 
 
 and t_Cat0_impl_infty ter pat idx =
@@ -273,7 +276,7 @@ and t_Cat0_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_cat0 xs pat
   in
-  revolver match_cat0 (ter, None, L2R, true) pat idx
+  boost match_cat0 (ter, true) pat idx
 
 
 and t_Cat1_impl_sol ter pat idx =
@@ -284,7 +287,7 @@ and t_Cat1_impl_sol ter pat idx =
                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                  | None -> match_sol xs pat
   in
-  revolver match_sol (ter, None, L2R, true) pat idx
+  boost match_sol (ter, true) pat idx
 
 
 and t_Cat1_impl_infty ter pat idx =
@@ -326,7 +329,7 @@ and t_Cat1_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_cat1 xs pat
   in
-  revolver match_cat1 (ter, None, L2R, true) pat idx
+  boost match_cat1 (ter, true) pat idx
 
 
 and t_Dup_impl_sol ter pat idx =
@@ -337,7 +340,7 @@ and t_Dup_impl_sol ter pat idx =
                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                  | None -> match_sol xs pat
   in
-  revolver match_sol (ter, None, L2R, true) pat idx
+  boost match_sol (ter, true) pat idx
 
 
 and t_Dup_impl_infty ter pat idx =
@@ -379,7 +382,7 @@ and t_Dup_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_dup xs pat
   in
-  revolver match_dup (ter, None, L2R, true) pat idx
+  boost match_dup (ter, true) pat idx
 
 
 and t_Opt_xtend_nil ter pat idx =
@@ -401,7 +404,7 @@ and t_Opt_impl_sol ter pat idx =
                    Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
                  | None -> match_sol xs pat
   in
-  revolver match_sol (ter, None, L2R, true) pat idx
+  boost match_sol (ter, true) pat idx
 
 
 and t_Alt_impl ter pat idx =
@@ -427,7 +430,7 @@ and t_Alt_impl ter pat idx =
                    Some found -> Some found
                  | None -> match_alt xs pat
   in
-  revolver match_alt (ter, None, L2R, true) pat idx;;
+  boost match_alt (ter, true) pat idx;;
 
 
 
