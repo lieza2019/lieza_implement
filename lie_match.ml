@@ -4,7 +4,6 @@ open Lie_equiv
 
 
 
-
 let rec idx_lkup pat idx =
   let addr pat =
     match pat with
@@ -21,23 +20,17 @@ let rec idx_lkup pat idx =
 
 (* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
    and tries to infer with given rule "cmp" for each equivalents. *)
-let boost cmp (ter_orig, ena_bumpup) pat idx =
-  let oracle purity t =
-    if purity then ((term_size t) >= (idx_lkup pat idx)) else true
+let rec revolver cmp (ter_orig, ter_crnt, assoc_dir, ena_bumpup) pat idx =
+  let oracle p t = (term_size t) >= (idx_lkup p idx)
   in
-  let rec revolver (ter_orig, ter_crnt, assoc_dir) purity =
-    let perf = (oracle purity) in
-    let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup)
-    in
+  if (oracle pat ter_orig) then    
+    let equivs = (equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup) in
     match equivs with
       (None, _, _) -> None
-    | (Some ter', e_ts, dir) -> match (cmp perf e_ts pat) with
+    | (Some ter', e_ts, dir) -> match (cmp e_ts pat) with
                                   Some found -> Some found;
-                                | None -> revolver (ter_orig, (Some ter'), dir) purity
-  in
-  match (revolver (ter_orig, None, L2R) true) with
-    Some bindings -> Some bindings
-  | None -> None;;
+                                | None -> revolver cmp (ter_orig, (Some ter'), dir, ena_bumpup) pat idx
+  else None;;
 
 
 let binds_union bindings1 bindings2 =
@@ -48,8 +41,6 @@ let binds_union bindings1 bindings2 =
   | bs1 -> match bindings2 with
              [] -> bs1
            | bs2 -> (bs1 @ bs2);;
-
-
 
 
 (* namely, null predicator with slight inteligence. *)
@@ -82,132 +73,6 @@ let rec is_nil t =
   | _ -> None;;
 
 
-<<<<<<< HEAD
-=======
-
-
-type prefix_attr =
-  | LEFTHAND_SIDE
-  | RIGHTHAND_SIDE
-  | NEUTRAL;;
-
-let first pat =
-  let prefix_ident (prefix_1, _) (prefix_2, __) = (pat_ident prefix_1 prefix_2)
-  in
-  let rec sort cands =
-    let gte p_1 p_2 = ((pat_size p_1) >= (pat_size p_2))
-    in
-    let rec max cs =
-      match cs with
-        [] -> None
-      | c::[] -> Some (c, [])
-      | c::cl -> match c with
-                   (prefix, _) -> match (max cl) with
-                                    Some ((prefix', attr'), cl')-> if (gte prefix prefix') then Some (c, cl)
-                                                                   else Some ((prefix', attr'), c::cl')
-                                  | None -> Some (c, [])
-    in
-    match cands with
-      [] -> []
-    | c::cs -> match c with
-                 (prefix, _) -> match (max cs) with
-                                  Some ((prefix', attr'), cs') -> if (gte prefix prefix') then (c :: (sort cs))
-                                                                  else ((prefix', attr') :: sort (c :: cs'))
-                                | None -> [c]
-  in
-  let rec has_nil fir_cands =
-    match fir_cands with
-      [] -> false
-    | (prefix, _)::cs -> if (pat_ident prefix (Pat_ent (NIL, "", -1))) then true else (has_nil cs)
-  in
-  let rec gath_prefix p =
-    let rec curve cands attr =
-      match cands with
-        [] -> []
-      | (prefix, _)::cs -> (prefix, attr) :: (curve cs attr)
-    in
-    let rec coupling cands_1 cands_2 ope =
-      match cands_1 with
-        [] -> []
-      | (prefix_1, _)::c_1s -> if (pat_ident prefix_1 (Pat_ent (NIL, "", -1))) then []
-                               else ((coupling_lst prefix_1 cands_2 ope) @ (coupling c_1s cands_2 ope))
-    and coupling_lst prefix_1 cands_2 ope =
-      match cands_2 with
-        [] -> []
-      | (prefix_2, _)::c_2s -> if (pat_ident prefix_2 (Pat_ent (NIL, "", -1))) then []
-                               else
-                                 [(Pat_bin(ope, prefix_1, prefix_2, -1), NEUTRAL)] @ (coupling_lst prefix_1 c_2s ope)
-    in
-    match p with
-      Pat_ent (ENT, id, ad) -> [(p, NEUTRAL)]
-    | Pat_bin (WEDGE, p_1, p_2, ad) -> let fir_1 = curve (gath_prefix p_1) LEFTHAND_SIDE in
-                                       let fir_2 = curve (gath_prefix p_2) RIGHTHAND_SIDE in
-                                       if (has_nil fir_1) then
-                                         if (has_nil fir_2) then [] else (curve fir_2 NEUTRAL)
-                                       else
-                                         if (has_nil fir_2) then (curve fir_1 NEUTRAL)
-                                         else
-                                           let fir_3 = curve (coupling fir_1 fir_2 WEDGE) NEUTRAL in
-                                           set_union prefix_ident fir_3 (set_union prefix_ident fir_1 fir_2)
-    | Pat_bin (VEE, p_1, p_2, ad) -> let fir_1 = curve (gath_prefix p_1) LEFTHAND_SIDE in
-                                     let fir_2 = curve (gath_prefix p_2) RIGHTHAND_SIDE in
-                                     if (has_nil fir_1) then
-                                       if (has_nil fir_2) then [] else (curve fir_2 NEUTRAL)
-                                     else
-                                       if (has_nil fir_2) then (curve fir_1 NEUTRAL)
-                                       else
-                                         let fir_3 = curve (coupling fir_1 fir_2 VEE) NEUTRAL in
-                                           set_union prefix_ident fir_3 (set_union prefix_ident fir_1 fir_2)
-    | Pat_una (STAR, p_1, ad) -> curve (set_union prefix_ident (gath_prefix p_1) [(Pat_ent (NIL, "", -1), NEUTRAL)]) NEUTRAL
-    | Pat_una (CROSS, p_1, ad) -> curve (gath_prefix p_1) NEUTRAL
-    | Pat_una (STROK, p_1, ad) -> curve (gath_prefix p_1) NEUTRAL
-    | Pat_una (OPT, p_1, ad) -> curve (set_union prefix_ident (gath_prefix p_1) [(Pat_ent (NIL, "", -1), NEUTRAL)]) NEUTRAL
-    | Pat_bin (ALT, p_L, p_R, ad) -> set_union prefix_ident (curve (gath_prefix p_L) NEUTRAL) (curve (gath_prefix p_R) NEUTRAL)
-    | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  in
-  sort (set_union prefix_ident (gath_prefix pat) [(Pat_ent (NIL, "", -1), NEUTRAL)]);;
-
-
-(* fetches "equivs" the new equivalent set derived from next equivalent term over associativity,
-   and tries to infer with given rule "cmp" for each equivalents. *)
-let boost cmp (ter_orig, ena_bumpup) pat =
-  let oracle p t =
-    match p with
-      (prefix, attr)
-      -> match attr with
-           LEFTHAND_SIDE -> (match t with
-                               Term_bin (WEDGE, t_1, t_2) -> ((term_size t_1) >= (pat_size prefix))
-                             | Term_bin (VEE, t_1, t_2) -> ((term_size t_1) >= (pat_size prefix))
-                             | _ -> false )
-         | RIGHTHAND_SIDE -> (match t with
-                                Term_bin (WEDGE, t_1, t_2) -> ((term_size t_2) >= (pat_size prefix))
-                              | Term_bin (VEE, t_1, t_2) -> ((term_size t_2) >= (pat_size prefix))
-                              | _ -> false )
-         | _ -> ((term_size t) >= (pat_size prefix)) (* includes NEUTRAL case. *)
-  in
-  let rec revolver ter_orig prefixes =
-    let rec dispatch (ter_orig, ter_crnt, assoc_dir) prefix =
-      let perf = (oracle prefix) in
-      let equivs = equiv_terms (ter_orig, ter_crnt, assoc_dir) ena_bumpup
-      in
-      match equivs with
-        (None, _, _) -> None
-      | (Some ter', e_ts, dir) -> match (cmp perf e_ts pat) with
-                                    Some found -> Some found;
-                                  | None -> dispatch (ter_orig, (Some ter'), dir) prefix
-    in
-    match prefixes with
-      [] -> None
-    | p::ps -> match (dispatch (ter_orig, None, L2R) p) with
-                 Some bindings -> Some bindings
-               | None -> revolver ter_orig ps
-  in
-  (* revolver ter_orig [(Pat_ent (NIL, "", -1), NEUTRAL)];; *)
-  revolver ter_orig (first pat);;
-
-
-
->>>>>>> d7bb46299e665f1cf77c97dd2ef9efe87183d334
 (* matching engine core, ITS THE COMPLEX OF WISDOM. *)
 let rec tourbillon ter pat idx =
   (* Decides the rule to be applied for inference according to syntax of given pattern. *)
@@ -225,7 +90,7 @@ let rec tourbillon ter pat idx =
                                       None -> None
                                     | Some judge_matched -> Some judge_matched)
   (* for the case of "t_Cat0_impl_nil" *)
-  | Pat_una (STAR, p_1, ad) -> (match (t_Cat0_impl_nil ter pat idx) with
+  | Pat_una (STAR, p_1, ad) -> (match (t_Cat0_impl_nil ter pat) with
                                   Some judge_matched -> Some judge_matched
                                 | None -> (match (t_Cat0_impl_sol ter p_1 idx) with
                                              Some judge_matched -> Some judge_matched
@@ -265,16 +130,14 @@ and t_Atom0_impl ter pat idx =
           Term_ent (ENT, t_id, t_sp, t_ad) -> if (t_id = p_id) then Some t else None
         | _ -> None)
     | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_atomic perf tl pat =
+  and match_atomic tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_atomic x pat) with
-                     Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
-                   | None -> match_atomic perf xs pat
-                 else (match_atomic perf xs pat)
+    | (x::xs) -> match (cmp_atomic x pat) with
+                   Some found -> Some {ter = ter; equ = found; pat = pat; fin = FIN_GND; bindings = []}
+                 | None -> match_atomic xs pat
   in
-  boost match_atomic (ter, false) pat idx
+  revolver match_atomic (ter, None, L2R, false) pat idx
 
 
 and t_Cas_impl ter pat idx =
@@ -303,16 +166,14 @@ and t_Cas_impl ter pat idx =
         | _ -> None
        )
     | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_cat perf tl pat =
+  and match_cat tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_cat x pat) with
-                     Some found -> Some found
-                   | None -> match_cat perf xs pat
-                 else (match_cat perf xs pat)
+    | (x::xs) -> match (cmp_cat x pat) with
+                   Some found -> Some found
+                 | None -> match_cat xs pat
   in
-  boost match_cat (ter, true) pat idx
+  revolver match_cat (ter, None, L2R, true) pat idx
 
 
 and t_Par_impl ter pat idx =
@@ -341,19 +202,17 @@ and t_Par_impl ter pat idx =
         | _ -> None
        )
     | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_par perf tl pat =
+  and match_par tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_par x pat) with
-                     Some found -> Some found
-                   | None -> match_par perf xs pat
-                 else (match_par perf xs pat)
+    | (x::xs) -> match (cmp_par x pat) with
+                   Some found -> Some found
+                 | None -> match_par xs pat
   in
-  boost match_par (ter, true) pat idx
+  revolver match_par (ter, None, L2R, true) pat idx
 
 
-and t_Cat0_impl_nil ter pat idx =
+and t_Cat0_impl_nil ter pat =
   match (is_nil ter) with
     None -> None
   | Some v ->
@@ -366,17 +225,14 @@ and t_Cat0_impl_nil ter pat idx =
 
 
 and t_Cat0_impl_sol ter pat idx =
-  let rec match_sol perf tl pat =
+  let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat idx) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
+    | (x::xs) -> match (tourbillon x pat idx) with
+                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+                 | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  revolver match_sol (ter, None, L2R, true) pat idx
 
 
 and t_Cat0_impl_infty ter pat idx =
@@ -410,30 +266,25 @@ and t_Cat0_impl_infty ter pat idx =
                       )
        )
     | _ -> None
-  and match_cat0 perf tl pat =
+  and match_cat0 tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_cat0 x pat) with
-                     Some found -> Some found
-                   | None -> match_cat0 perf xs pat
-                 else (match_cat0 perf xs pat)
+    | (x::xs) -> match (cmp_cat0 x pat) with
+                   Some found -> Some found
+                 | None -> match_cat0 xs pat
   in
-  boost match_cat0 (ter, true) pat idx
+  revolver match_cat0 (ter, None, L2R, true) pat idx
 
 
 and t_Cat1_impl_sol ter pat idx =
-  let rec match_sol perf tl pat =
+  let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat idx) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
+    | (x::xs) -> match (tourbillon x pat idx) with
+                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+                 | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  revolver match_sol (ter, None, L2R, true) pat idx
 
 
 and t_Cat1_impl_infty ter pat idx =
@@ -468,30 +319,25 @@ and t_Cat1_impl_infty ter pat idx =
                       )
        )
     | _ -> None
-  and match_cat1 perf tl pat =
+  and match_cat1 tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_cat1 x pat) with
-                     Some found -> Some found
-                   | None -> match_cat1 perf xs pat
-                 else (match_cat1 perf xs pat)
+    | (x::xs) -> match (cmp_cat1 x pat) with
+                   Some found -> Some found
+                 | None -> match_cat1 xs pat
   in
-  boost match_cat1 (ter, true) pat idx
+  revolver match_cat1 (ter, None, L2R, true) pat idx
 
 
 and t_Dup_impl_sol ter pat idx =
-  let rec match_sol perf tl pat =
+  let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat idx) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
+    | (x::xs) -> match (tourbillon x pat idx) with
+                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+                 | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  revolver match_sol (ter, None, L2R, true) pat idx
 
 
 and t_Dup_impl_infty ter pat idx =
@@ -526,16 +372,14 @@ and t_Dup_impl_infty ter pat idx =
                       )
        )
     | _ -> None
-  and match_dup perf tl pat =
+  and match_dup tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_dup x pat) with
-                     Some found -> Some found
-                   | None -> match_dup perf xs pat
-                 else (match_dup perf xs pat)
+    | (x::xs) -> match (cmp_dup x pat) with
+                   Some found -> Some found
+                 | None -> match_dup xs pat
   in
-  boost match_dup (ter, true) pat idx
+  revolver match_dup (ter, None, L2R, true) pat idx
 
 
 and t_Opt_xtend_nil ter pat idx =
@@ -550,17 +394,14 @@ and t_Opt_xtend_nil ter pat idx =
 
 
 and t_Opt_impl_sol ter pat idx =
-  let rec match_sol perf tl pat =
+  let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) ->
-       if (perf x) then
-         match (tourbillon x pat idx) with
-           Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
-         | None -> match_sol perf xs pat
-       else (match_sol perf xs pat)
+    | (x::xs) -> match (tourbillon x pat idx) with
+                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+                 | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  revolver match_sol (ter, None, L2R, true) pat idx
 
 
 and t_Alt_impl ter pat idx =
@@ -579,16 +420,14 @@ and t_Alt_impl ter pat idx =
                   )
        )
     | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__))
-  and match_alt perf tl pat =
+  and match_alt tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> if (perf x) then
-                   match (cmp_alt x pat) with
-                     Some found -> Some found
-                   | None -> match_alt perf xs pat
-                 else (match_alt perf xs pat)
+    | (x::xs) -> match (cmp_alt x pat) with
+                   Some found -> Some found
+                 | None -> match_alt xs pat
   in
-  boost match_alt (ter, true) pat idx;;
+  revolver match_alt (ter, None, L2R, true) pat idx;;
 
 
 
@@ -663,7 +502,7 @@ let rec curve pat ad =
                                   (match rL with
                                      (p_L', ad_L') -> let rR = (curve p_R (ad_L' + 1)) in
                                                       (match rR with
-                                                         (p_R', ad_R') -> (Pat_bin (VEE, p_L', p_R', (ad_R' + 1)), (ad_R' + 1)) )
+                                                         (p_R', ad_R') -> (Pat_bin (ALT, p_L', p_R', (ad_R' + 1)), (ad_R' + 1)) )
                                   )
   | _ -> raise (Illegal_pat_detected (pat, __LINE__, __FILE__));;
 
