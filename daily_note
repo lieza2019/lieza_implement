@@ -56,3 +56,15 @@ foreach (resolv ver_ASR (typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 
 
 let ver_appTR = cli_pat (compile "* : TR+");;y
 foreach (resolv ver_appTR (typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_#21 | RKR_#22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) : HR & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR)")));;
+
+
+
+term (typematch (compile "TLSR_1T & (TLSR_2T | NKR_#2) & (TLSR_3T | RKR_#3) & (TLSR_4T | TR_4) : (TLSR | (NKR % RKR)?)* & (TLSR | TR)"));;
+
+
+let sr_trg = cli_pat (compile "* : (TLSR | (NKR % RKR)?)*");;
+foreach (resolv sr_trg (typematch (compile "TLSR_1T & (TLSR_2T | NKR_#2) & (TLSR_3T | RKR_#3) & (TLSR_4T | TR_4) : (TLSR | (NKR % RKR)?)* & (TLSR | TR)")));;
+
+
+let sr_rel = cli_pat (compile "* : (TLSR | TR)");;
+foreach (resolv sr_rel (typematch (compile "TLSR_1T & (TLSR_2T | NKR_#2) & (TLSR_3T | RKR_#3) & (TLSR_4T | TR_4) : (TLSR | (NKR % RKR)?)* & (TLSR | TR)")));;
