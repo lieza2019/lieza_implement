@@ -239,18 +239,9 @@ and t_Cat0_impl_sol ter pat idx =
 
 
 and t_Cat0_impl_infty ter pat idx =
-  let disbumping ter =
-    match ter with
-      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
-       (match t_t with
-          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
-        | _ -> None)
-    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
-    | _ -> None
-  in
   let rec cmp_cat0 t pat =
-    match (disbumping t) with
-      Some (t_h, t_t) ->
+    match t with
+      Term_bin (WEDGE, t_h, t_t) ->
        let r_h = (tourbillon t_h pat idx)
        in
        (match r_h with
@@ -276,7 +267,7 @@ and t_Cat0_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_cat0 xs pat
   in
-  boost match_cat0 (ter, true) pat idx
+  boost match_cat0 (ter, false) pat idx
 
 
 and t_Cat1_impl_sol ter pat idx =
@@ -291,18 +282,9 @@ and t_Cat1_impl_sol ter pat idx =
 
 
 and t_Cat1_impl_infty ter pat idx =
-  let disbumping ter =
-    match ter with
-      Term_bin (WEDGE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
-       (match t_t with
-          Term_bin (WEDGE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
-        | _ -> None)
-    | Term_bin (WEDGE, t_h, t_t) -> Some (t_h, t_t)
-    | _ -> None
-  in
   let rec cmp_cat1 t pat =
-    match (disbumping t) with
-      Some (t_h, t_t) ->
+    match t with
+      Term_bin (WEDGE, t_h, t_t) ->
        let r_h = (tourbillon t_h pat idx)
        in
        (match r_h with
@@ -329,7 +311,7 @@ and t_Cat1_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_cat1 xs pat
   in
-  boost match_cat1 (ter, true) pat idx
+  boost match_cat1 (ter, false) pat idx
 
 
 and t_Dup_impl_sol ter pat idx =
@@ -344,18 +326,9 @@ and t_Dup_impl_sol ter pat idx =
 
 
 and t_Dup_impl_infty ter pat idx =
-  let disbumping ter =
-    match ter with
-      Term_bin (VEE, Term_una ( STAR, Term_ent (NIL, "", "", ad) ), t_t) ->
-       (match t_t with
-          Term_bin (VEE, t_t_h, t_t_t) -> Some (t_t_h, t_t_t)
-        | _ -> None)
-    | Term_bin (VEE, t_h, t_t) -> Some (t_h, t_t)
-    | _ -> None
-  in
   let rec cmp_dup t pat =
-    match (disbumping t) with
-      Some (t_h, t_t) ->
+    match t with
+      Term_bin (VEE, t_h, t_t) ->
        let r_h = (tourbillon t_h pat idx)
        in
        (match r_h with
@@ -382,7 +355,7 @@ and t_Dup_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_dup xs pat
   in
-  boost match_dup (ter, true) pat idx
+  boost match_dup (ter, false) pat idx
 
 
 and t_Opt_xtend_nil ter pat idx =

@@ -68,3 +68,15 @@ foreach (resolv sr_trg (typematch (compile "TLSR_1T & (TLSR_2T | NKR_#2) & (TLSR
 
 let sr_rel = cli_pat (compile "* : (TLSR | TR)");;
 foreach (resolv sr_rel (typematch (compile "TLSR_1T & (TLSR_2T | NKR_#2) & (TLSR_3T | RKR_#3) & (TLSR_4T | TR_4) : (TLSR | (NKR % RKR)?)* & (TLSR | TR)")));;
+
+
+2019/12/27:
+ok : typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TENR_30 & MSlR_11L) : HR & (LR | (NKR % RKR)!)+ & (TENR & MSlR)");;
+NG!: typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L)) : HR & (LR | (NKR % RKR)!)+");;
+ok:  typematch (compile "HR_11L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i & (TENR_30 & MSlR_11L)) : HR & (LR | (NKR % RKR)!)+ & (TR & (TENR & MSlR))");;
+
+ok : typematch (compile "HR_11L & (LR_11 | RKR_21) : HR & (LR | (NKR % RKR)!)+ & (TENR & MSlR)");;
+ok : typematch (compile "(NKR_12 | (LR_11 & RKR_21)) : HR & (LR | (NKR % RKR)!)+ & (TENR & MSlR)");;
+NG!: typematch (compile "HR_11L & (LR_11 | RKR_21) & (NKR_12 | (LR_11 & RKR_21)) : HR & (LR | (NKR % RKR)!)+ & (TENR & MSlR)");;
+
+typematch (compile "HR_11L & HR_12L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) & TR_1 & TR_2 & TR_3 : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR) & TR*");; ,15[sec] -> 28[sec]
