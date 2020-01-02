@@ -97,19 +97,19 @@ let rec tourbillon ter pat idx =
                                   Some judge_matched -> Some judge_matched
                                 | None -> (match (t_Cat0_impl_sol ter p_1 idx) with
                                              Some judge_matched -> Some judge_matched
-                                           |  None -> (match (t_Cat0_impl_infty ter p_1 idx) with
+                                           |  None -> (match (t_Cat0_impl_infty ter pat idx) with
                                                          None -> None
                                                        | Some judge_matched -> Some judge_matched) ) )
   (* for the case of "t_Cat1_impl_sol" *)
   | Pat_una (CROSS, p_1, ad) -> (match (t_Cat1_impl_sol ter p_1 idx) with
                                    Some judge_matched -> Some judge_matched
-                                 |  None -> (match (t_Cat1_impl_infty ter p_1 idx) with
+                                 |  None -> (match (t_Cat1_impl_infty ter pat idx) with
                                                None -> None
                                              | Some judge_matched -> Some judge_matched) )
   (* for the case of "t_Dup_impl_sol" *)
   | Pat_una (STROK, p_1, ad) -> (match (t_Dup_impl_sol ter p_1 idx) with
                                    Some judge_matched -> Some judge_matched
-                                 |  None -> (match (t_Dup_impl_infty ter p_1 idx) with
+                                 |  None -> (match (t_Dup_impl_infty ter pat idx) with
                                                None -> None
                                              | Some judge_matched -> Some judge_matched) )
   (* for the case of "t_Opt_xtend_nil" *)
@@ -176,7 +176,9 @@ and t_Cas_impl ter pat idx =
                    Some found -> Some found
                  | None -> match_cat xs pat
   in
-  boost match_cat (ter, true) pat idx
+  match (cmp_cat ter pat) with
+    Some found -> Some found
+  | None -> boost match_cat (ter, true) pat idx
 
 
 and t_Par_impl ter pat idx =
@@ -212,7 +214,9 @@ and t_Par_impl ter pat idx =
                    Some found -> Some found
                  | None -> match_par xs pat
   in
-  boost match_par (ter, true) pat idx
+  match (cmp_par ter pat) with
+    Some found -> Some found
+  | None -> boost match_par (ter, true) pat idx
 
 
 and t_Cat0_impl_nil ter pat =
@@ -228,14 +232,21 @@ and t_Cat0_impl_nil ter pat =
 
 
 and t_Cat0_impl_sol ter pat idx =
+  let rec cmp_cat0_solo t pat =
+    match (tourbillon t pat idx) with
+      Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | None -> None
+  in
   let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> match (tourbillon x pat idx) with
-                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STAR, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | (x::xs) -> match (cmp_cat0_solo x pat) with
+                   Some found -> Some found
                  | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  match (cmp_cat0_solo ter pat) with
+    Some found -> Some found
+  | None -> boost match_sol (ter, false) pat idx
 
 
 and t_Cat0_impl_infty ter pat idx =
@@ -246,7 +257,7 @@ and t_Cat0_impl_infty ter pat idx =
        in
        (match r_h with
         | None -> None
-        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (STAR, pat, -1)) idx)
+        | Some b_h -> let r_t = (tourbillon t_t pat idx)
                       in
                       (match r_t with
                        | None -> None
@@ -256,7 +267,7 @@ and t_Cat0_impl_infty ter pat idx =
                                         [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                       | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
                                              in
-                                             Some {ter = ter; equ = e; pat = Pat_una (STAR, pat, -1); fin = FIN_INFTY; bindings = b} )
+                                             Some {ter = ter; equ = e; pat = pat; fin = FIN_INFTY; bindings = b} )
                       )
        )
     | _ -> None
@@ -267,18 +278,29 @@ and t_Cat0_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_cat0 xs pat
   in
-  boost match_cat0 (ter, false) pat idx
+  match (cmp_cat0 ter pat) with
+    Some found -> Some found
+  | None -> boost match_cat0 (ter, false) pat idx
+
+     
 
 
 and t_Cat1_impl_sol ter pat idx =
+  let rec cmp_cat1_solo t pat =
+    match (tourbillon t pat idx) with
+      Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | None -> None
+  in
   let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> match (tourbillon x pat idx) with
-                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (CROSS, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | (x::xs) -> match (cmp_cat1_solo x pat) with
+                   Some found -> Some found
                  | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  match (cmp_cat1_solo ter pat) with
+    Some found -> Some found
+  | None -> boost match_sol (ter, false) pat idx
 
 
 and t_Cat1_impl_infty ter pat idx =
@@ -289,7 +311,7 @@ and t_Cat1_impl_infty ter pat idx =
        in
        (match r_h with
         | None -> None
-        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (CROSS, pat, -1)) idx)
+        | Some b_h -> let r_t = (tourbillon t_t pat idx)
                       in
                       (match r_t with
                        | None -> None
@@ -299,7 +321,7 @@ and t_Cat1_impl_infty ter pat idx =
                                         [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                       | b -> let e = Term_bin (WEDGE, b_h.ter, b_t.equ)
                                              in
-                                             Some {ter = ter; equ = e; pat = Pat_una (CROSS, pat, -1); fin = FIN_INFTY; bindings = b}
+                                             Some {ter = ter; equ = e; pat = pat; fin = FIN_INFTY; bindings = b}
                                      )
                       )
        )
@@ -311,18 +333,27 @@ and t_Cat1_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_cat1 xs pat
   in
-  boost match_cat1 (ter, false) pat idx
+  match (cmp_cat1 ter pat) with
+    Some found -> Some found
+  | None -> boost match_cat1 (ter, false) pat idx
 
 
 and t_Dup_impl_sol ter pat idx =
+  let rec cmp_dup_solo t pat =
+    match (tourbillon t pat idx) with
+      Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | None -> None
+  in
   let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> match (tourbillon x pat idx) with
-                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (STROK, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | (x::xs) -> match (cmp_dup_solo x pat) with
+                   Some found -> Some found
                  | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  match (cmp_dup_solo ter pat) with
+    Some found -> Some found
+  | None -> boost match_sol (ter, false) pat idx
 
 
 and t_Dup_impl_infty ter pat idx =
@@ -333,7 +364,7 @@ and t_Dup_impl_infty ter pat idx =
        in
        (match r_h with
         | None -> None
-        | Some b_h -> let r_t = (tourbillon t_t (Pat_una (STROK, pat, -1)) idx)
+        | Some b_h -> let r_t = (tourbillon t_t pat idx)
                       in
                       (match r_t with
                        | None -> None
@@ -343,7 +374,7 @@ and t_Dup_impl_infty ter pat idx =
                                         [] -> raise (Illformed_bindings_detected (t, pat, __LINE__, __FILE__))
                                       | b -> let e = Term_bin (VEE, b_h.ter, b_t.equ)
                                              in
-                                             Some {ter = ter; equ = e; pat = Pat_una (STROK, pat, -1); fin = FIN_INFTY; bindings = b}
+                                             Some {ter = ter; equ = e; pat = pat; fin = FIN_INFTY; bindings = b}
                                      )
                       )
        )
@@ -355,7 +386,9 @@ and t_Dup_impl_infty ter pat idx =
                    Some found -> Some found
                  | None -> match_dup xs pat
   in
-  boost match_dup (ter, false) pat idx
+  match (cmp_dup ter pat) with
+    Some found -> Some found
+  | None -> boost match_dup (ter, false) pat idx
 
 
 and t_Opt_xtend_nil ter pat idx =
@@ -370,14 +403,21 @@ and t_Opt_xtend_nil ter pat idx =
 
 
 and t_Opt_impl_sol ter pat idx =
+  let rec cmp_opt_solo t pat =
+    match (tourbillon t pat idx) with
+      Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | None -> None
+  in
   let rec match_sol tl pat =
     match tl with
       [] -> None
-    | (x::xs) -> match (tourbillon x pat idx) with
-                   Some found -> Some {ter = ter; equ = found.ter; pat = (Pat_una (OPT, found.pat, -1)); fin = FIN_SOL; bindings = [found]}
+    | (x::xs) -> match (cmp_opt_solo x pat) with
+                   Some found -> Some found
                  | None -> match_sol xs pat
   in
-  boost match_sol (ter, true) pat idx
+  match (cmp_opt_solo ter pat) with
+    Some found -> Some found
+  | None -> boost match_sol (ter, false) pat idx
 
 
 and t_Alt_impl ter pat idx =
@@ -403,7 +443,9 @@ and t_Alt_impl ter pat idx =
                    Some found -> Some found
                  | None -> match_alt xs pat
   in
-  boost match_alt (ter, true) pat idx;;
+  match (cmp_alt ter pat) with
+    Some found -> Some found
+  | None -> boost match_alt (ter, false) pat idx;;
 
 
 

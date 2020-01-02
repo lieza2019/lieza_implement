@@ -79,4 +79,6 @@ ok : typematch (compile "HR_11L & (LR_11 | RKR_21) : HR & (LR | (NKR % RKR)!)+ &
 ok : typematch (compile "(NKR_12 | (LR_11 & RKR_21)) : HR & (LR | (NKR % RKR)!)+ & (TENR & MSlR)");;
 NG!: typematch (compile "HR_11L & (LR_11 | RKR_21) & (NKR_12 | (LR_11 & RKR_21)) : HR & (LR | (NKR % RKR)!)+ & (TENR & MSlR)");;
 
-typematch (compile "HR_11L & HR_12L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) & TR_1 & TR_2 & TR_3 : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR) & TR*");; ,15[sec] -> 28[sec]
+marginally: typematch (compile "HR_11L & HR_12L & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) & TR_1 & TR_2 & TR_3 : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR) & TR*");;
+VERY FAST: typematch (compile "(HR_11L & HR_12L) & (LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) & (TR_1 & TR_2 & TR_3) : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR) & TR*");;
+IMMEDIATELY: typematch (compile "(HR_11L & HR_12L) & ((LR_11 | RKR_21) & (LR_12 | NKR_21 | RKR_22)) & (TR_21i | (TENR_30 & MSlR_11L) | ASR_11L) & (TR_1 & TR_2 & TR_3) : HR* & (LR | (NKR % RKR)!)* & (TR+ | (TENR & MSlR) | ASR) & TR*");;
